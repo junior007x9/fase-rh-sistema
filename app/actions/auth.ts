@@ -32,9 +32,9 @@ export async function fazerLogin(formData: FormData) {
           nome: "Administrador Geral",
           email,
           senha, 
-          cargo: "ADMIN",
+          role: "ADMIN", // CORRIGIDO AQUI (role em vez de cargo)
         });
-        // Se acabou de criar, pode prosseguir para o login
+        // Se acabou de criar, prossegue para gerar o token
       } else {
         // Se já existem usuários e o e-mail não foi achado:
         return { erro: "Acesso negado. E-mail ou senha incorretos." };
@@ -48,7 +48,8 @@ export async function fazerLogin(formData: FormData) {
 
     // 4. Se chegou aqui, a senha está certa. Gera o Token de Acesso!
     const secret = new TextEncoder().encode(JWT_SECRET);
-    const token = await new SignJWT({ email, cargo: usuario?.cargo || 'ADMIN' })
+    // CORRIGIDO AQUI (usuario.role em vez de usuario.cargo)
+    const token = await new SignJWT({ email, role: usuario?.role || 'ADMIN' })
       .setProtectedHeader({ alg: "HS256" })
       .setExpirationTime("8h")
       .sign(secret);

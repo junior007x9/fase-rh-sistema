@@ -23,7 +23,7 @@ export async function fazerLogin(formData: FormData) {
     const resultado = await db.select().from(usuarios).where(eq(usuarios.email, email));
     const usuario = resultado[0];
 
-    // 2. Se o banco estiver totalmente vazio, cria o primeiro Admin
+    // 2. Se o banco estiver totalmente vazio, cria o primeiro usuário mestre
     if (!usuario) {
       const totalUsuarios = await db.select().from(usuarios);
       if (totalUsuarios.length === 0) {
@@ -32,7 +32,7 @@ export async function fazerLogin(formData: FormData) {
           nome: "Administrador Geral",
           email,
           senha, 
-          role: "ADMIN", // CORRIGIDO AQUI (role em vez de cargo)
+          role: "DIRETORIA", // ⬅️ CORRIGIDO: Agora usa o cargo oficial do banco
         });
         // Se acabou de criar, prossegue para gerar o token
       } else {
@@ -48,8 +48,8 @@ export async function fazerLogin(formData: FormData) {
 
     // 4. Se chegou aqui, a senha está certa. Gera o Token de Acesso!
     const secret = new TextEncoder().encode(JWT_SECRET);
-    // CORRIGIDO AQUI (usuario.role em vez de usuario.cargo)
-    const token = await new SignJWT({ email, role: usuario?.role || 'ADMIN' })
+    // ⬅️ CORRIGIDO: Fallback para DIRETORIA se por acaso vier vazio
+    const token = await new SignJWT({ email, role: usuario?.role || 'DIRETORIA' })
       .setProtectedHeader({ alg: "HS256" })
       .setExpirationTime("8h")
       .sign(secret);

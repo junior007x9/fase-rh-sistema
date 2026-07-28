@@ -1,8 +1,8 @@
-// Arquivo: actions/auth.ts
+// Arquivo: app/actions/auth.ts
 "use server";
 
-import { db } from "../db/index";
-import { usuarios } from "../db/schema";
+import { db } from "../../db/index";     // CAMINHO CORRIGIDO!
+import { usuarios } from "../../db/schema"; // CAMINHO CORRIGIDO!
 import { eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";

@@ -1,7 +1,7 @@
 // Arquivo: app/login/page.tsx
 "use client";
 
-import { login } from "../../actions/auth";
+import { login } from "../actions/auth"; // CAMINHO CORRIGIDO AQUI!
 import { useRouter } from "next/navigation";
 import { Lock } from "lucide-react";
 import { useState } from "react";

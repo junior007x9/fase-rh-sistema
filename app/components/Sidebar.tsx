@@ -1,9 +1,10 @@
 // Arquivo: app/components/Sidebar.tsx
-"use client"; // Necessário para lermos a URL atual
+"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Users, PieChart, LogOut, Shield, Briefcase } from "lucide-react";
+import { sairDoSistema } from "../actions/logout";
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -59,12 +60,14 @@ export default function Sidebar() {
         </ul>
       </nav>
 
-      {/* RODAPÉ */}
+      {/* RODAPÉ COM BOTÃO DE LOGOUT REAL */}
       <div className="p-4 border-t border-slate-800">
-        <Link href="/login" className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:bg-slate-800 hover:text-red-300 transition-colors">
-          <LogOut size={20} />
-          <span className="font-medium">Sair / Desconectar</span>
-        </Link>
+        <form action={sairDoSistema}>
+          <button type="submit" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:bg-slate-800 hover:text-red-300 transition-colors text-left cursor-pointer">
+            <LogOut size={20} />
+            <span className="font-medium">Sair / Desconectar</span>
+          </button>
+        </form>
       </div>
     </aside>
   );

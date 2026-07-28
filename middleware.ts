@@ -28,7 +28,9 @@ export async function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
-// Protege o sistema inteiro, exceto imagens e a rota /login
+// Protege o sistema inteiro, exceto imagens e arquivos estáticos
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  matcher: [
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 };

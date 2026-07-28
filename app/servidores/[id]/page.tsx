@@ -7,8 +7,8 @@ import {
 import { eq, desc } from "drizzle-orm";
 import Link from "next/link";
 import { ArrowLeft, MapPin, Landmark, PhoneCall, User, Briefcase, History } from "lucide-react";
-import { salvarEndereco, salvarContaBancaria, salvarContatoEmergencia } from "../../../actions/anexos";
-import { alocarServidor } from "../../../actions/historico";
+import { salvarEndereco, salvarContaBancaria, salvarContatoEmergencia } from "../../actions/anexos";
+import { alocarServidor } from "../../actions/historico";
 
 export const dynamic = "force-dynamic";
 

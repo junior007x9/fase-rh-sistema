@@ -5,6 +5,7 @@ import {
 } from "../../db/schema";
 import { eq, isNull, and, sql, desc } from "drizzle-orm";
 import { Briefcase, Building, Cake, PieChart, Users } from "lucide-react";
+import ExportarBotoes from "../../components/ExportarBotoes";
 
 export const dynamic = "force-dynamic";
 
@@ -80,9 +81,12 @@ export default async function RelatoriosPage() {
 
   return (
     <div className="max-w-7xl mx-auto pb-12">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Central de Relatórios</h1>
-        <p className="text-gray-500 mt-1">Consolidação de dados institucionais, lotações e aniversariantes.</p>
+      <header className="mb-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Central de Relatórios</h1>
+          <p className="text-gray-500 mt-1">Consolidação de dados institucionais, lotações e aniversariantes.</p>
+        </div>
+        <ExportarBotoes cargos={relatorioCargos} lotacoes={relatorioLotacoes} />
       </header>
 
       {/* CARDS DE RESUMO GERAL */}

@@ -16,7 +16,7 @@ export const lotacoes = sqliteTable('lotacoes', {
   criadoEm: text('criado_em').default(sql`CURRENT_TIMESTAMP`),
 });
 
-// 2. Servidores (Informação Institucional)
+// 2. Servidores
 export const servidores = sqliteTable('servidores', {
   id: text('id').primaryKey(),
   vinculo: text('vinculo', { enum: ['EFETIVO', 'CONTRATADO', 'COMISSIONADO', 'ESTAGIARIO'] }).notNull(),
@@ -29,7 +29,7 @@ export const servidores = sqliteTable('servidores', {
   atualizadoEm: text('atualizado_em').default(sql`CURRENT_TIMESTAMP`),
 });
 
-// 3. Dados Pessoais e Diversidade
+// 3. Dados Pessoais
 export const dadosPessoais = sqliteTable('dados_pessoais', {
   servidorId: text('servidor_id').primaryKey().references(() => servidores.id, { onDelete: 'cascade' }),
   nome: text('nome').notNull(),
@@ -95,7 +95,7 @@ export const dependentesPensionistas = sqliteTable('dependentes_pensionistas', {
   documentoReferencia: text('documento_referencia'), 
 });
 
-// 9. Histórico Funcional (Registro de alteração de cargo/lotação e tempo de casa)
+// 9. Histórico Funcional
 export const historicoFuncional = sqliteTable('historico_funcional', {
   id: text('id').primaryKey(),
   servidorId: text('servidor_id').notNull().references(() => servidores.id, { onDelete: 'cascade' }),
@@ -117,7 +117,7 @@ export const periodosAquisitivos = sqliteTable('periodos_aquisitivos', {
   diasRestantes: integer('dias_restantes').default(30).notNull(),
 });
 
-// 11. Eventos de Ausência (Férias, Licenças, Saúde)
+// 11. Eventos de Ausência
 export const eventosAusencia = sqliteTable('eventos_ausencia', {
   id: text('id').primaryKey(),
   servidorId: text('servidor_id').notNull().references(() => servidores.id, { onDelete: 'cascade' }),
@@ -141,4 +141,14 @@ export const candidatos = sqliteTable('candidatos', {
   status: text('status', { enum: ['RESERVA', 'CONVOCADO', 'REJEITADO'] }).default('RESERVA').notNull(),
   criadoEm: text('criado_em').default(sql`CURRENT_TIMESTAMP`),
   atualizadoEm: text('atualizado_em').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// 13. USUÁRIOS DO SISTEMA (NOVO)
+export const usuarios = sqliteTable('usuarios', {
+  id: text('id').primaryKey(),
+  nome: text('nome').notNull(),
+  email: text('email').notNull().unique(),
+  senha: text('senha').notNull(),
+  role: text('role', { enum: ['RH', 'DIRETORIA'] }).default('RH').notNull(),
+  criadoEm: text('criado_em').default(sql`CURRENT_TIMESTAMP`),
 });

@@ -60,17 +60,27 @@ export default async function PerfilServidorPage({
   return (
     <div className="max-w-6xl mx-auto pb-12 space-y-8">
       {/* CABEÇALHO */}
-      <header className="flex items-center gap-4 border-b border-gray-200 pb-6">
-        <Link href="/servidores" className="p-2 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">
-          <ArrowLeft size={20} className="text-gray-700" />
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">{pessoal.nome}</h1>
-          <p className="text-gray-500 flex gap-2 items-center mt-1">
-            <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded-full">{servidorBase.vinculo}</span>
-            <span>CPF: {docs?.cpf}</span>
-          </p>
+      <header className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-gray-200 pb-6 gap-4">
+        <div className="flex items-center gap-4">
+          <Link href="/servidores" className="p-2 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">
+            <ArrowLeft size={20} className="text-gray-700" />
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">{pessoal.nome}</h1>
+            <p className="text-gray-500 flex gap-2 items-center mt-1">
+              <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded-full">{servidorBase.vinculo}</span>
+              <span>CPF: {docs?.cpf}</span>
+            </p>
+          </div>
         </div>
+        
+        {/* BOTÃO PARA ACESSAR FÉRIAS E AUSÊNCIAS */}
+        <Link 
+          href={`/servidores/${servidorId}/ausencias`} 
+          className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm"
+        >
+          Gerenciar Férias e Ausências
+        </Link>
       </header>
 
       {/* SEÇÃO: HISTÓRICO FUNCIONAL (CARGO E LOTAÇÃO) */}

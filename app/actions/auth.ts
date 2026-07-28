@@ -1,78 +1,84 @@
 // Arquivo: app/actions/auth.ts
 "use server";
 
+import { cookies } from "next/headers";
 import { db } from "../../db/index";
 import { usuarios } from "../../db/schema";
-import { eq, sql } from "drizzle-orm";
-import bcrypt from "bcryptjs";
+import { eq } from "drizzle-orm";
 import { SignJWT, jwtVerify } from "jose";
-import { cookies } from "next/headers";
 import { randomUUID } from "crypto";
 
-const SECRET_KEY = new TextEncoder().encode(process.env.JWT_SECRET || "chave_secreta_padrao_fase_ma");
+const JWT_SECRET = process.env.JWT_SECRET || "chave_secreta_padrao_fase_ma";
 
-export async function login(formData: FormData) {
+export async function fazerLogin(formData: FormData) {
   const email = formData.get("email") as string;
   const senha = formData.get("senha") as string;
 
-  if (!email || !senha) throw new Error("Preencha todos os campos.");
-
-  // Lógica inteligente: Se a tabela estiver vazia, cria o primeiro Admin
-  const totalUsers = await db.select({ count: sql<number>`count(*)` }).from(usuarios);
-  if (totalUsers[0].count === 0) {
-    const hashSenha = await bcrypt.hash(senha, 10);
-    await db.insert(usuarios).values({
-      id: randomUUID(),
-      nome: "Administrador Geral",
-      email: email,
-      senha: hashSenha,
-      role: "DIRETORIA", // Nível máximo
-    });
+  if (!email || !senha) {
+    return { erro: "Por favor, preencha o e-mail e a senha." };
   }
 
-  // Verifica o usuário
-  const userList = await db.select().from(usuarios).where(eq(usuarios.email, email));
-  const user = userList[0];
+  try {
+    // 1. Busca o usuário no banco de dados
+    const resultado = await db.select().from(usuarios).where(eq(usuarios.email, email));
+    const usuario = resultado[0];
 
-  if (!user) throw new Error("Credenciais inválidas.");
+    // 2. Se o banco estiver totalmente vazio, cria o primeiro Admin
+    if (!usuario) {
+      const totalUsuarios = await db.select().from(usuarios);
+      if (totalUsuarios.length === 0) {
+        await db.insert(usuarios).values({
+          id: randomUUID(),
+          nome: "Administrador Geral",
+          email,
+          senha, 
+          cargo: "ADMIN",
+        });
+        // Se acabou de criar, pode prosseguir para o login
+      } else {
+        // Se já existem usuários e o e-mail não foi achado:
+        return { erro: "Acesso negado. E-mail ou senha incorretos." };
+      }
+    } else {
+      // 3. Se o usuário existe, verifica se a senha bate
+      if (usuario.senha !== senha) {
+        return { erro: "Acesso negado. E-mail ou senha incorretos." };
+      }
+    }
 
-  const senhaValida = await bcrypt.compare(senha, user.senha);
-  if (!senhaValida) throw new Error("Credenciais inválidas.");
+    // 4. Se chegou aqui, a senha está certa. Gera o Token de Acesso!
+    const secret = new TextEncoder().encode(JWT_SECRET);
+    const token = await new SignJWT({ email, cargo: usuario?.cargo || 'ADMIN' })
+      .setProtectedHeader({ alg: "HS256" })
+      .setExpirationTime("8h")
+      .sign(secret);
 
-  // Gera o Token JWT com o Nível de Acesso (Role)
-  const token = await new SignJWT({ id: user.id, role: user.role, nome: user.nome })
-    .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime("8h")
-    .sign(SECRET_KEY);
+    // 5. Salva o cookie de forma segura aguardando a promessa
+    const cookieStore = await cookies();
+    cookieStore.set("fase_rh_token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 8, // 8 horas logado
+      path: "/",
+    });
 
-  // CORREÇÃO AQUI: Aguardando a Promise dos cookies
-  const cookieStore = await cookies();
-  cookieStore.set("fase_rh_token", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    path: "/",
-  });
-
-  return { success: true };
+    return { sucesso: true };
+  } catch (error) {
+    console.error("Erro no sistema de login:", error);
+    return { erro: "Erro interno no servidor ao tentar acessar." };
+  }
 }
 
-export async function logout() {
-  // CORREÇÃO AQUI: Aguardando a Promise dos cookies
-  const cookieStore = await cookies();
-  cookieStore.delete("fase_rh_token");
-}
-
-// Função para checar permissão em Server Components
 export async function getSessaoUsuario() {
-  // CORREÇÃO AQUI: Aguardando a Promise dos cookies
   const cookieStore = await cookies();
   const token = cookieStore.get("fase_rh_token")?.value;
-  
   if (!token) return null;
+
   try {
-    const { payload } = await jwtVerify(token, SECRET_KEY);
-    return payload as { id: string; role: "RH" | "DIRETORIA"; nome: string };
+    const secret = new TextEncoder().encode(JWT_SECRET);
+    const { payload } = await jwtVerify(token, secret);
+    return payload;
   } catch (error) {
     return null;
   }

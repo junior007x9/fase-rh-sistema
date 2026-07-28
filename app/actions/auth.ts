@@ -1,8 +1,8 @@
 // Arquivo: app/actions/auth.ts
 "use server";
 
-import { db } from "../../db/index";     // CAMINHO CORRIGIDO!
-import { usuarios } from "../../db/schema"; // CAMINHO CORRIGIDO!
+import { db } from "../../db/index";
+import { usuarios } from "../../db/schema";
 import { eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
@@ -45,7 +45,9 @@ export async function login(formData: FormData) {
     .setExpirationTime("8h")
     .sign(SECRET_KEY);
 
-  cookies().set("fase_rh_token", token, {
+  // CORREÇÃO AQUI: Aguardando a Promise dos cookies
+  const cookieStore = await cookies();
+  cookieStore.set("fase_rh_token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
@@ -56,12 +58,17 @@ export async function login(formData: FormData) {
 }
 
 export async function logout() {
-  cookies().delete("fase_rh_token");
+  // CORREÇÃO AQUI: Aguardando a Promise dos cookies
+  const cookieStore = await cookies();
+  cookieStore.delete("fase_rh_token");
 }
 
 // Função para checar permissão em Server Components
 export async function getSessaoUsuario() {
-  const token = cookies().get("fase_rh_token")?.value;
+  // CORREÇÃO AQUI: Aguardando a Promise dos cookies
+  const cookieStore = await cookies();
+  const token = cookieStore.get("fase_rh_token")?.value;
+  
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, SECRET_KEY);

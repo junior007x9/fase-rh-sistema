@@ -60,6 +60,11 @@ export default function RootLayout({
                   <FileText size={20} /> Relatórios
                 </Link>
               </li>
+              <li>
+                <Link href="/usuarios" className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800 transition-colors text-purple-400">
+                  <Shield size={20} /> Gestão de Acessos
+                </Link>
+              </li>
             </ul>
           </nav>
         </aside>

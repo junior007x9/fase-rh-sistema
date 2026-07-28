@@ -4,7 +4,8 @@ import { servidores, dadosPessoais, periodosAquisitivos, eventosAusencia } from 
 import { eq, desc } from "drizzle-orm";
 import Link from "next/link";
 import { ArrowLeft, CalendarRange, Clock, ShieldAlert } from "lucide-react";
-import { salvarPeriodoAquisitivo, salvarEventoAusencia } from "../../../../actions/ausencias";
+// CAMINHO CORRIGIDO ABAIXO (Apenas 3 níveis de retorno)
+import { salvarPeriodoAquisitivo, salvarEventoAusencia } from "../../../actions/ausencias";
 
 export const dynamic = "force-dynamic";
 

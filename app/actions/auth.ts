@@ -7,11 +7,13 @@ import { usuarios } from "../../db/schema";
 import { eq } from "drizzle-orm";
 import { SignJWT, jwtVerify } from "jose";
 import { randomUUID } from "crypto";
+import bcrypt from "bcryptjs"; // ⬅️ Nosso novo tradutor de criptografia
 
 const JWT_SECRET = process.env.JWT_SECRET || "chave_secreta_padrao_fase_ma";
 
 export async function fazerLogin(formData: FormData) {
-  const email = formData.get("email") as string;
+  const emailBruto = formData.get("email") as string;
+  const email = emailBruto ? emailBruto.trim() : "";
   const senha = formData.get("senha") as string;
 
   if (!email || !senha) {
@@ -19,48 +21,52 @@ export async function fazerLogin(formData: FormData) {
   }
 
   try {
-    // 1. Busca o usuário no banco de dados
     const resultado = await db.select().from(usuarios).where(eq(usuarios.email, email));
     const usuario = resultado[0];
 
-    // 2. Se o banco estiver totalmente vazio, cria o primeiro usuário mestre
     if (!usuario) {
       const totalUsuarios = await db.select().from(usuarios);
       if (totalUsuarios.length === 0) {
+        // Criptografa a senha do primeiro admin para manter o padrão seguro!
+        const senhaCriptografada = await bcrypt.hash(senha, 10);
+        
         await db.insert(usuarios).values({
           id: randomUUID(),
           nome: "Administrador Geral",
           email,
-          senha, 
-          role: "DIRETORIA", // ⬅️ CORRIGIDO: Agora usa o cargo oficial do banco
+          senha: senhaCriptografada, 
+          role: "DIRETORIA", 
         });
-        // Se acabou de criar, prossegue para gerar o token
       } else {
-        // Se já existem usuários e o e-mail não foi achado:
         return { erro: "Acesso negado. E-mail ou senha incorretos." };
       }
     } else {
-      // 3. Se o usuário existe, verifica se a senha bate
-      if (usuario.senha !== senha) {
+      // ⬅️ A MÁGICA ACONTECE AQUI
+      // Compara a senha que o usuário digitou com a criptografia salva no banco
+      const senhaValidaCriptografada = await bcrypt.compare(senha, usuario.senha);
+      
+      // Fallback: caso a senha no banco ainda esteja em texto normal (dos nossos testes antigos)
+      const senhaValidaNormal = usuario.senha === senha;
+
+      if (!senhaValidaCriptografada && !senhaValidaNormal) {
         return { erro: "Acesso negado. E-mail ou senha incorretos." };
       }
     }
 
-    // 4. Se chegou aqui, a senha está certa. Gera o Token de Acesso!
+    // Gera o Token de Acesso
     const secret = new TextEncoder().encode(JWT_SECRET);
-    // ⬅️ CORRIGIDO: Fallback para DIRETORIA se por acaso vier vazio
     const token = await new SignJWT({ email, role: usuario?.role || 'DIRETORIA' })
       .setProtectedHeader({ alg: "HS256" })
       .setExpirationTime("8h")
       .sign(secret);
 
-    // 5. Salva o cookie de forma segura aguardando a promessa
+    // Salva o cookie
     const cookieStore = await cookies();
     cookieStore.set("fase_rh_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 60 * 60 * 8, // 8 horas logado
+      maxAge: 60 * 60 * 8,
       path: "/",
     });
 

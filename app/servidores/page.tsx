@@ -1,151 +1,148 @@
 // Arquivo: app/servidores/page.tsx
 import { db } from "../../db/index";
-import { servidores, dadosPessoais, documentos } from "../../db/schema";
-import { eq, like, or } from "drizzle-orm";
+import { servidores, dadosPessoais, documentos, historicoFuncional, cargos, lotacoes } from "../../db/schema";
+import { eq, or, like, and, isNull } from "drizzle-orm";
+import { Search } from "lucide-react";
 import Link from "next/link";
-import { Search, Plus, Eye } from "lucide-react";
-import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export default async function ServidoresListPage({
+export default async function ServidoresPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>; // Tipagem atualizada para Promise
+  searchParams: { q?: string };
 }) {
-  // CORREÇÃO: Aguardando a Promise do Next.js ser resolvida antes de ler o "q"
-  const resolvedSearchParams = await searchParams;
-  const q = resolvedSearchParams.q || "";
+  const q = searchParams.q || "";
 
-  // Consulta ao banco de dados utilizando JOIN para unir as tabelas
-  let query = db
+  // 1. SOLUÇÃO DO ERRO DO TYPESCRIPT: 
+  // Criamos a condição fora da query. Se não houver texto, ela fica 'undefined'.
+  const condicaoBusca = q
+    ? or(
+        like(dadosPessoais.nome, `%${q}%`),
+        like(documentos.cpf, `%${q}%`),
+        like(documentos.rg, `%${q}%`)
+      )
+    : undefined;
+
+  // 2. Consulta tipada com segurança, agrupando todas as tabelas (Cargo, Lotação, Admissão)
+  const listaServidores = await db
     .select({
       id: servidores.id,
       nome: dadosPessoais.nome,
       cpf: documentos.cpf,
-      vinculo: servidores.vinculo,
+      rg: documentos.rg,
       dataAdmissao: servidores.dataAdmissao,
+      dataDesligamento: servidores.dataDesligamento,
+      cargo: cargos.nome,
+      lotacao: lotacoes.nome,
       status: servidores.status,
     })
     .from(servidores)
     .leftJoin(dadosPessoais, eq(servidores.id, dadosPessoais.servidorId))
-    .leftJoin(documentos, eq(servidores.id, documentos.servidorId));
-
-  // Aplica o filtro de busca se houver algo digitado (Nome ou CPF)
-  if (q) {
-    query = query.where(
-      or(
-        like(dadosPessoais.nome, `%${q}%`),
-        like(documentos.cpf, `%${q}%`)
-      )
-    );
-  }
-
-  const listaServidores = await query;
-
-  // Função para processar a busca no servidor e atualizar a URL
-  async function realizarBusca(formData: FormData) {
-    "use server";
-    const busca = formData.get("busca") as string;
-    if (busca) {
-      redirect(`/servidores?q=${encodeURIComponent(busca)}`);
-    } else {
-      redirect(`/servidores`);
-    }
-  }
+    .leftJoin(documentos, eq(servidores.id, documentos.servidorId))
+    // Pega apenas a alocação atual (onde dataFim é nulo)
+    .leftJoin(
+      historicoFuncional,
+      and(eq(servidores.id, historicoFuncional.servidorId), isNull(historicoFuncional.dataFim))
+    )
+    .leftJoin(cargos, eq(historicoFuncional.cargoId, cargos.id))
+    .leftJoin(lotacoes, eq(historicoFuncional.lotacaoId, lotacoes.id))
+    .where(condicaoBusca); // O Drizzle resolve o undefined automaticamente!
 
   return (
     <div className="max-w-7xl mx-auto pb-12">
       <header className="mb-8 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Servidores</h1>
-          <p className="text-gray-500 mt-1">Gerencie a lista de servidores e aplique filtros.</p>
+          <p className="text-gray-500 mt-1">Gestão e filtro de informações pessoais e institucionais.</p>
         </div>
-        <Link 
-          href="/servidores/novo" 
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-sm flex items-center gap-2"
+        <Link
+          href="/servidores/novo"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-sm"
         >
-          <Plus size={20} /> Novo Servidor
+          + Novo Servidor
         </Link>
       </header>
 
-      {/* Barra de Filtros e Busca */}
-      <section className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6 flex flex-col md:flex-row gap-4 justify-between items-center">
-        <form action={realizarBusca} className="flex w-full md:w-1/2 relative">
-          <input 
-            type="text" 
-            name="busca" 
-            defaultValue={q}
-            placeholder="Buscar por Nome ou CPF..." 
-            className="w-full border border-gray-300 rounded-lg py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <Search size={20} className="absolute left-3 top-2.5 text-gray-400" />
-          <button type="submit" className="ml-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg transition-colors">
+      {/* SESSÃO DE BUSCA E FILTROS */}
+      <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm mb-8">
+        <form className="flex flex-col sm:flex-row items-center gap-4">
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+            <input
+              type="text"
+              name="q"
+              defaultValue={q}
+              placeholder="Buscar por Nome, CPF ou RG..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+          <button type="submit" className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white px-6 py-2 rounded-lg font-medium transition-colors">
             Filtrar
           </button>
-        </form>
-        
-        {q && (
-          <Link href="/servidores" className="text-sm text-red-600 hover:underline font-medium">
-            Limpar Filtros
+          <Link href="/servidores" className="w-full sm:w-auto text-center text-gray-500 hover:text-gray-700 px-4 py-2 font-medium">
+            Limpar
           </Link>
-        )}
+        </form>
       </section>
 
-      {/* Tabela de Dados */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      {/* LISTAGEM DOS SERVIDORES */}
+      <section className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 border-b border-gray-200 text-sm font-semibold text-slate-600">
-                <th className="py-4 px-6">Nome</th>
-                <th className="py-4 px-6">CPF</th>
-                <th className="py-4 px-6">Vínculo</th>
-                <th className="py-4 px-6">Admissão</th>
-                <th className="py-4 px-6">Status</th>
-                <th className="py-4 px-6 text-right">Ações</th>
+          <table className="w-full text-left text-sm border-collapse">
+            <thead className="bg-slate-50 border-b border-gray-200">
+              <tr>
+                <th className="py-3 px-4 font-semibold text-slate-600">Servidor (CPF/RG)</th>
+                <th className="py-3 px-4 font-semibold text-slate-600">Cargo / Lotação</th>
+                <th className="py-3 px-4 font-semibold text-slate-600">Admissão</th>
+                <th className="py-3 px-4 font-semibold text-slate-600 text-center">Status</th>
               </tr>
             </thead>
             <tbody>
               {listaServidores.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-gray-500">
-                    Nenhum servidor encontrado com os filtros atuais.
+                  <td colSpan={4} className="py-8 text-center text-gray-500">
+                    Nenhum servidor encontrado com os filtros aplicados.
                   </td>
                 </tr>
               ) : (
                 listaServidores.map((servidor) => (
-                  <tr key={servidor.id} className="border-b border-gray-100 hover:bg-slate-50 transition-colors">
-                    <td className="py-4 px-6 font-medium text-gray-900">{servidor.nome || "Não informado"}</td>
-                    <td className="py-4 px-6 text-gray-600">{servidor.cpf || "Não informado"}</td>
-                    <td className="py-4 px-6">
-                      <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded-full">
-                        {servidor.vinculo}
-                      </span>
+                  <tr key={servidor.id} className="border-b border-gray-100 hover:bg-slate-50">
+                    
+                    <td className="py-3 px-4">
+                      <p className="font-bold text-gray-900">{servidor.nome || "Sem nome"}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">CPF: {servidor.cpf} | RG: {servidor.rg}</p>
                     </td>
-                    <td className="py-4 px-6 text-gray-600">{servidor.dataAdmissao}</td>
-                    <td className="py-4 px-6">
-                      <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                        servidor.status === 'ATIVO' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                    
+                    <td className="py-3 px-4">
+                      <p className="text-gray-800 font-medium">{servidor.cargo || "Não alocado"}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{servidor.lotacao || "Sem lotação"}</p>
+                    </td>
+                    
+                    <td className="py-3 px-4 text-xs text-gray-600">
+                      <p>Entrada: {servidor.dataAdmissao}</p>
+                      {servidor.dataDesligamento && (
+                        <p className="text-red-500 mt-1 font-medium">Desligado: {servidor.dataDesligamento}</p>
+                      )}
+                    </td>
+                    
+                    <td className="py-3 px-4 text-center">
+                      <span className={`text-[10px] uppercase font-bold px-3 py-1 rounded-full border ${
+                        servidor.status === 'ATIVO' ? 'bg-green-100 text-green-800 border-green-200' :
+                        servidor.status === 'AFASTADO' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                        'bg-red-100 text-red-800 border-red-200'
                       }`}>
                         {servidor.status}
                       </span>
                     </td>
-                    <td className="py-4 px-6 text-right">
-                      <Link 
-                        href={`/servidores/${servidor.id}`} 
-                        className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 font-medium"
-                      >
-                        <Eye size={16} /> Ver Perfil
-                      </Link>
-                    </td>
+                    
                   </tr>
                 ))
               )}
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

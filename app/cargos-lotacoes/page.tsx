@@ -37,7 +37,7 @@ export default async function CargosLotacoesPage() {
               Cargos Registrados ({listaCargos.length})
             </h2>
             
-            <form action={criarCargo} className="flex gap-2">
+            <form action={criarCargo as any} className="flex gap-2">
               <input name="nome" placeholder="Nome do novo cargo..." required className="flex-1 border border-slate-300 p-2.5 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
               <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-bold shadow-sm transition-colors cursor-pointer">
                 <PlusCircle size={18} /> Adicionar
@@ -74,7 +74,7 @@ export default async function CargosLotacoesPage() {
               Lotações Registradas ({listaLotacoes.length})
             </h2>
             
-            <form action={criarLotacao} className="flex gap-2">
+            <form action={criarLotacao as any} className="flex gap-2">
               <input name="sigla" placeholder="Sigla (Ex: RH)" required className="w-28 border border-slate-300 p-2.5 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm uppercase" />
               <input name="nome" placeholder="Nome da lotação..." required className="flex-1 border border-slate-300 p-2.5 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm" />
               <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-bold shadow-sm transition-colors cursor-pointer">

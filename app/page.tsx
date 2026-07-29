@@ -1,13 +1,14 @@
 // Arquivo: app/page.tsx
+export const dynamic = 'force-dynamic'; // ⚡ ESTA É A LINHA MÁGICA QUE RESOLVE O PROBLEMA
+
 import { db } from "../db/index";
 import { servidores, candidatos, lotacoes, eventosAusencia } from "../db/schema";
-import { eq } from "drizzle-orm";
 import { Users, UserMinus, Briefcase, MapPin, UserPlus, FileText } from "lucide-react";
 import Link from "next/link";
 import DashboardCharts from "./components/DashboardCharts";
 
 export default async function DashboardPage() {
-  // 1. Buscando Dados do Banco
+  // 1. Buscando Dados do Banco em Tempo Real
   const todosServidores = await db.select().from(servidores);
   const totalCandidatos = await db.select().from(candidatos);
   const totalLotacoes = await db.select().from(lotacoes);
@@ -28,7 +29,6 @@ export default async function DashboardPage() {
 
   // Gráfico de Ausências
   const ausenciasCount = todasAusencias.reduce((acc: any, curr) => {
-    // Simplificando os nomes muito grandes
     const nomeLimpo = curr.tipoAusencia.replace(/_/g, ' ');
     acc[nomeLimpo] = (acc[nomeLimpo] || 0) + 1;
     return acc;
@@ -101,7 +101,6 @@ export default async function DashboardPage() {
       </div>
 
       {/* GRÁFICOS (Componente Cliente) */}
-      {/* Se não houver dados, o componente mostrará os gráficos vazios de forma elegante */}
       <DashboardCharts 
         vinculosData={vinculosData.length > 0 ? vinculosData : [{name: 'Sem Dados', value: 1}]} 
         ausenciasData={ausenciasData} 

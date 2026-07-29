@@ -17,15 +17,15 @@ export async function registrarLogAuditoria(
     const sessao = await getSessaoUsuario();
     const usuarioEmail = sessao?.email || "SISTEMA";
 
-    // 2. Salva o rastro no banco
+    // 2. Salva o rastro no banco tipado corretamente
     await db.insert(auditoriaLogs).values({
       id: randomUUID(),
-      usuarioEmail: usuarioEmail,
-      acao: acao,
+      usuarioEmail,
+      acao,
       tabelaAfetada: tabela,
-      registroId: registroId,
-      detalhes: detalhes,
-    });
+      registroId,
+      detalhes,
+    } as any);
     
     return { sucesso: true };
   } catch (error) {

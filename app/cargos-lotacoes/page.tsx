@@ -1,127 +1,111 @@
 // Arquivo: app/cargos-lotacoes/page.tsx
 import { db } from "../../db/index";
 import { cargos, lotacoes } from "../../db/schema";
-import { salvarCargo, salvarLotacao } from "../actions/cargos-lotacoes"; // <-- Importação corrigida aqui (../)
-import { Briefcase, Building, Plus } from "lucide-react";
-import { desc } from "drizzle-orm";
-
-export const dynamic = "force-dynamic";
+import { Briefcase, MapPin, PlusCircle } from "lucide-react";
+import BotoesAcao from "../components/BotoesAcao";
+import { criarCargo, criarLotacao } from "../actions/cargos-lotacoes";
 
 export default async function CargosLotacoesPage() {
-  // Buscando os dados cadastrados ordenados pelos mais recentes
-  const listaCargos = await db.select().from(cargos).orderBy(desc(cargos.criadoEm));
-  const listaLotacoes = await db.select().from(lotacoes).orderBy(desc(lotacoes.criadoEm));
+  const listaCargos = await db.select().from(cargos);
+  const listaLotacoes = await db.select().from(lotacoes);
 
   return (
-    <div className="max-w-6xl mx-auto pb-12">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Cargos e Lotações</h1>
-        <p className="text-gray-500 mt-1">Gerencie a estrutura organizacional da FASE-MA.</p>
-      </header>
+    <div className="space-y-6 animate-in fade-in duration-500">
+      
+      {/* CABEÇALHO */}
+      <div className="bg-gradient-to-r from-slate-900 to-blue-900 p-8 rounded-3xl shadow-xl text-white">
+        <div className="flex items-center gap-4 mb-2">
+          <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
+            <Briefcase size={28} className="text-white" />
+          </div>
+          <h1 className="text-3xl font-extrabold tracking-tight">Cargos e Lotações</h1>
+        </div>
+        <p className="text-blue-100 mt-2 text-lg">
+          Gerencie a estrutura organizacional. Todas as alterações são monitoradas via auditoria.
+        </p>
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
         
-        {/* 1. MÓDULO DE CARGOS */}
-        <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col h-full">
-          <div className="flex items-center gap-2 border-b pb-4 mb-4">
-            <Briefcase className="text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-800">Cargos da Instituição</h2>
+        {/* ================================== */}
+        {/* COLUNA 1: CARGOS */}
+        {/* ================================== */}
+        <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
+          <div className="p-6 border-b border-slate-100 bg-slate-50 flex flex-col gap-4">
+            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+              <Briefcase className="text-blue-600" size={22} /> 
+              Cargos Registrados ({listaCargos.length})
+            </h2>
+            
+            <form action={criarCargo} className="flex gap-2">
+              <input name="nome" placeholder="Nome do novo cargo..." required className="flex-1 border border-slate-300 p-2.5 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+              <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-bold shadow-sm transition-colors cursor-pointer">
+                <PlusCircle size={18} /> Adicionar
+              </button>
+            </form>
           </div>
-
-          {/* Formulário de Novo Cargo */}
-          <form action={salvarCargo} className="flex gap-2 mb-6">
-            <input 
-              type="text" 
-              name="nome" 
-              placeholder="Nome do Cargo (ex: SOCIOEDUCADOR)" 
-              required 
-              className="flex-1 border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors flex items-center gap-1 text-sm font-medium">
-              <Plus size={16} /> Adicionar
-            </button>
-          </form>
-
-          {/* Lista de Cargos */}
-          <div className="flex-1 overflow-y-auto max-h-96 border border-gray-100 rounded-lg">
-            <table className="w-full text-left border-collapse text-sm">
-              <thead className="bg-slate-50 border-b border-gray-200 sticky top-0">
-                <tr>
-                  <th className="py-3 px-4 font-semibold text-slate-600">Nome do Cargo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {listaCargos.length === 0 ? (
-                  <tr>
-                    <td className="py-4 px-4 text-center text-gray-500">Nenhum cargo cadastrado.</td>
+          
+          <div className="p-0">
+            <table className="w-full text-left border-collapse">
+              <tbody className="divide-y divide-slate-100">
+                {listaCargos.map((c) => (
+                  <tr key={c.id} className="hover:bg-slate-50 transition-colors group">
+                    <td className="p-4 font-medium text-slate-700">{c.nome}</td>
+                    <td className="p-4 text-right w-40 opacity-50 group-hover:opacity-100 transition-opacity">
+                      <BotoesAcao id={c.id} nomeAntigo={c.nome} tipo="CARGO" />
+                    </td>
                   </tr>
-                ) : (
-                  listaCargos.map((cargo) => (
-                    <tr key={cargo.id} className="border-b border-gray-100 hover:bg-slate-50 transition-colors">
-                      <td className="py-3 px-4 text-gray-800 font-medium">{cargo.nome}</td>
-                    </tr>
-                  ))
+                ))}
+                {listaCargos.length === 0 && (
+                  <tr><td colSpan={2} className="p-8 text-center text-slate-400">Nenhum cargo cadastrado.</td></tr>
                 )}
               </tbody>
             </table>
           </div>
-        </section>
+        </div>
 
-
-        {/* 2. MÓDULO DE LOTAÇÕES */}
-        <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col h-full">
-          <div className="flex items-center gap-2 border-b pb-4 mb-4">
-            <Building className="text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-800">Unidades e Lotações</h2>
+        {/* ================================== */}
+        {/* COLUNA 2: LOTAÇÕES */}
+        {/* ================================== */}
+        <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
+          <div className="p-6 border-b border-slate-100 bg-slate-50 flex flex-col gap-4">
+            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+              <MapPin className="text-emerald-600" size={22} /> 
+              Lotações Registradas ({listaLotacoes.length})
+            </h2>
+            
+            <form action={criarLotacao} className="flex gap-2">
+              <input name="sigla" placeholder="Sigla (Ex: RH)" required className="w-28 border border-slate-300 p-2.5 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm uppercase" />
+              <input name="nome" placeholder="Nome da lotação..." required className="flex-1 border border-slate-300 p-2.5 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm" />
+              <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-bold shadow-sm transition-colors cursor-pointer">
+                <PlusCircle size={18} /> Adicionar
+              </button>
+            </form>
           </div>
-
-          {/* Formulário de Nova Lotação */}
-          <form action={salvarLotacao} className="flex gap-2 mb-6">
-            <input 
-              type="text" 
-              name="nome" 
-              placeholder="Nome (ex: SEDE SÃO LUÍS)" 
-              required 
-              className="flex-1 border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <input 
-              type="text" 
-              name="sigla" 
-              placeholder="Sigla (ex: SEDE)" 
-              required 
-              className="w-24 border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors flex items-center gap-1 text-sm font-medium">
-              <Plus size={16} /> Adicionar
-            </button>
-          </form>
-
-          {/* Lista de Lotações */}
-          <div className="flex-1 overflow-y-auto max-h-96 border border-gray-100 rounded-lg">
-            <table className="w-full text-left border-collapse text-sm">
-              <thead className="bg-slate-50 border-b border-gray-200 sticky top-0">
-                <tr>
-                  <th className="py-3 px-4 font-semibold text-slate-600">Sigla</th>
-                  <th className="py-3 px-4 font-semibold text-slate-600">Nome da Lotação</th>
-                </tr>
-              </thead>
-              <tbody>
-                {listaLotacoes.length === 0 ? (
-                  <tr>
-                    <td colSpan={2} className="py-4 px-4 text-center text-gray-500">Nenhuma lotação cadastrada.</td>
+          
+          <div className="p-0">
+            <table className="w-full text-left border-collapse">
+              <tbody className="divide-y divide-slate-100">
+                {listaLotacoes.map((l) => (
+                  <tr key={l.id} className="hover:bg-slate-50 transition-colors group">
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        <span className="bg-emerald-100 text-emerald-800 font-bold px-2.5 py-1 rounded-lg text-xs">{l.sigla}</span>
+                        <span className="font-medium text-slate-700">{l.nome}</span>
+                      </div>
+                    </td>
+                    <td className="p-4 text-right w-40 opacity-50 group-hover:opacity-100 transition-opacity">
+                      <BotoesAcao id={l.id} nomeAntigo={l.nome} tipo="LOTACAO" />
+                    </td>
                   </tr>
-                ) : (
-                  listaLotacoes.map((lotacao) => (
-                    <tr key={lotacao.id} className="border-b border-gray-100 hover:bg-slate-50 transition-colors">
-                      <td className="py-3 px-4 text-gray-600 font-bold">{lotacao.sigla}</td>
-                      <td className="py-3 px-4 text-gray-800">{lotacao.nome}</td>
-                    </tr>
-                  ))
+                ))}
+                {listaLotacoes.length === 0 && (
+                  <tr><td colSpan={2} className="p-8 text-center text-slate-400">Nenhuma lotação cadastrada.</td></tr>
                 )}
               </tbody>
             </table>
           </div>
-        </section>
+        </div>
 
       </div>
     </div>

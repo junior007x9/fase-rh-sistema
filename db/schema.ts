@@ -152,3 +152,15 @@ export const usuarios = sqliteTable('usuarios', {
   role: text('role', { enum: ['RH', 'DIRETORIA'] }).default('RH').notNull(),
   criadoEm: text('criado_em').default(sql`CURRENT_TIMESTAMP`),
 });
+// ==========================================
+// 14. AUDITORIA E LOGS DO SISTEMA (Acesso Restrito)
+// ==========================================
+export const auditoriaLogs = sqliteTable('auditoria_logs', {
+  id: text('id').primaryKey(),
+  usuarioEmail: text('usuario_email').notNull(),
+  acao: text('acao', { enum: ['CRIAR', 'EDITAR', 'EXCLUIR'] }).notNull(),
+  tabelaAfetada: text('tabela_afetada').notNull(),
+  registroId: text('registro_id').notNull(),
+  detalhes: text('detalhes'), // O que mudou (pode salvar JSON aqui)
+  criadoEm: text('criado_em').default(sql`CURRENT_TIMESTAMP`),
+});

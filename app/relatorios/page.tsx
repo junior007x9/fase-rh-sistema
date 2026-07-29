@@ -1,21 +1,27 @@
 // Arquivo: app/relatorios/page.tsx
 import { db } from "../../db/index";
-import { servidores, dadosPessoais } from "../../db/schema";
+import { servidores, dadosPessoais, documentos } from "../../db/schema";
 import ExportadorRelatorios from "../components/ExportadorRelatorios";
 import { BarChart3 } from "lucide-react";
 
 export default async function RelatoriosPage() {
-  // 1. Busca os dados do banco
+  // 1. Busca os dados separados de cada tabela
   const listaServidores = await db.select().from(servidores);
   const listaDadosPessoais = await db.select().from(dadosPessoais);
+  const listaDocumentos = await db.select().from(documentos);
 
-  // 2. Mescla os dados das duas tabelas de forma segura
+  // 2. Mescla os dados das três tabelas usando o ID do servidor
   const dadosCompletos = listaServidores.map((servidor) => {
+    // Procura o nome na tabela de Dados Pessoais
     const dados = listaDadosPessoais.find((d) => d.servidorId === servidor.id);
+    
+    // Procura o CPF na tabela de Documentos
+    const docs = listaDocumentos.find((d) => d.servidorId === servidor.id);
+
     return {
       id: servidor.id,
       nome: dados?.nome || "Nome não cadastrado",
-      cpf: dados?.cpf || "---",
+      cpf: docs?.cpf || "---", // Agora pega do lugar certo!
       vinculo: servidor.vinculo,
       status: servidor.status,
       dataAdmissao: servidor.dataAdmissao,

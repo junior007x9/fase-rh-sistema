@@ -1,27 +1,29 @@
 // Arquivo: app/ausencias/page.tsx
 import { db } from "../../db/index";
-import { ausencias, servidores } from "../../db/schema";
+import { eventosAusencia, dadosPessoais } from "../../db/schema";
 import { eq } from "drizzle-orm";
 import { Clock, PlusCircle } from "lucide-react";
 
 export default async function AusenciasPage() {
-  // Busca todas as ausências cadastradas vinculadas aos servidores
   let listaAusencias: any[] = [];
   let listaServidores: any[] = [];
 
   try {
-    listaServidores = await db.select().from(servidores);
+    // Busca os dados pessoais dos servidores para listar no select
+    listaServidores = await db.select().from(dadosPessoais);
+    
+    // Busca as ausências (eventosAusencia) conectadas ao nome do servidor (dadosPessoais)
     listaAusencias = await db
       .select({
-        id: ausencias.id,
-        tipo: ausencias.tipo,
-        inicio: ausencias.inicio,
-        fim: ausencias.fim,
-        motivo: ausencias.motivo,
-        servidorNome: servidores.nome,
+        id: eventosAusencia.id,
+        tipo: eventosAusencia.tipoAusencia,
+        inicio: eventosAusencia.dataInicio,
+        fim: eventosAusencia.dataFim,
+        motivo: eventosAusencia.observacao,
+        servidorNome: dadosPessoais.nome,
       })
-      .from(ausencias)
-      .leftJoin(servidores, eq(ausencias.servidorId, servidores.id));
+      .from(eventosAusencia)
+      .leftJoin(dadosPessoais, eq(eventosAusencia.servidorId, dadosPessoais.servidorId));
   } catch (error) {
     console.error("Erro ao carregar ausências:", error);
   }
@@ -53,35 +55,36 @@ export default async function AusenciasPage() {
               <select name="servidorId" required className="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">Selecione o servidor...</option>
                 {listaServidores.map((serv: any) => (
-                  <option key={serv.id} value={serv.id}>{serv.nome}</option>
+                  <option key={serv.servidorId} value={serv.servidorId}>{serv.nome}</option>
                 ))}
               </select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Ausência</label>
-              <select name="tipo" required className="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="LICENCA_MEDICA">Licença Médica</option>
+              <select name="tipoAusencia" required className="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="SAUDE">Licença Saúde / Médica</option>
                 <option value="LICENCA_PREMIO">Licença Prêmio</option>
+                <option value="LICENCA_MATERNIDADE">Licença Maternidade</option>
                 <option value="FERIAS">Férias</option>
-                <option value="OUTROS">Outros Afastamentos</option>
+                <option value="AFASTAMENTO_SUPERIOR_15">Afastamento Superior a 15 Dias</option>
               </select>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Início</label>
-                <input type="date" name="inicio" required className="w-full border border-slate-300 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                <input type="date" name="dataInicio" required className="w-full border border-slate-300 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Fim</label>
-                <input type="date" name="fim" required className="w-full border border-slate-300 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                <input type="date" name="dataFim" required className="w-full border border-slate-300 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Motivo / Observações</label>
-              <textarea name="motivo" rows={3} className="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="Detalhes do afastamento..."></textarea>
+              <textarea name="observacao" rows={3} className="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="Detalhes do afastamento..."></textarea>
             </div>
 
             <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-lg transition-colors shadow-sm text-sm cursor-pointer">

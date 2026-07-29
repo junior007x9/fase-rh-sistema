@@ -129,11 +129,11 @@ export const eventosAusencia = sqliteTable('eventos_ausencia', {
   criadoEm: text('criado_em').default(sql`CURRENT_TIMESTAMP`),
 });
 
-// 12. Recrutamento
+// 12. Recrutamento (Agora limpo e com segurança)
 export const candidatos = sqliteTable('candidatos', {
   id: text('id').primaryKey(),
   nome: text('nome').notNull(),
-  cpf: text('cpf').notNull().unique(),
+  cpf: text('cpf').notNull().unique(), 
   email: text('email').notNull().unique(),
   telefone: text('telefone').notNull(),
   qualificacaoCurriculo: text('qualificacao_curriculo'),
@@ -143,7 +143,7 @@ export const candidatos = sqliteTable('candidatos', {
   atualizadoEm: text('atualizado_em').default(sql`CURRENT_TIMESTAMP`),
 });
 
-// 13. USUÁRIOS DO SISTEMA (NOVO)
+// 13. USUÁRIOS DO SISTEMA
 export const usuarios = sqliteTable('usuarios', {
   id: text('id').primaryKey(),
   nome: text('nome').notNull(),

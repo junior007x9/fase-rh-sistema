@@ -6,6 +6,7 @@ import { candidatos } from "../../db/schema";
 import { eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
+import { registrarLogAuditoria } from "./auditoria"; // <-- Importação da auditoria
 
 // 1. Função para Cadastrar Novo Candidato
 export async function registrarCandidato(formData: FormData) {
@@ -21,8 +22,10 @@ export async function registrarCandidato(formData: FormData) {
   }
 
   try {
+    const novoId = randomUUID(); // Geramos o ID aqui para passar para a auditoria
+    
     await db.insert(candidatos).values({
-      id: randomUUID(),
+      id: novoId,
       nome,
       cpf,
       email,
@@ -31,6 +34,9 @@ export async function registrarCandidato(formData: FormData) {
       areaAdaptacaoSugerida: areaAdaptacaoSugerida || null,
       status: "RESERVA", // Todo candidato entra como Cadastro de Reserva por padrão
     });
+
+    // Registra a ação na auditoria
+    await registrarLogAuditoria("CRIAR", "candidatos", novoId, `Cadastrou o candidato: ${nome} (CPF: ${cpf})`);
 
     revalidatePath("/recrutamento");
     revalidatePath("/"); // Atualiza o dashboard também
@@ -55,10 +61,28 @@ export async function atualizarStatusCandidato(formData: FormData) {
       })
       .where(eq(candidatos.id, candidatoId));
 
+    // Registra a ação na auditoria
+    await registrarLogAuditoria("EDITAR", "candidatos", candidatoId, `Atualizou o status do candidato para: ${novoStatus}`);
+
     revalidatePath("/recrutamento");
     revalidatePath("/");
   } catch (error) {
     console.error("Erro ao atualizar status:", error);
     throw new Error("Falha ao atualizar o status do candidato.");
+  }
+}
+
+// 3. Função para Excluir Candidato (A nova função com Auditoria)
+export async function excluirCandidato(id: string, nome: string) {
+  try {
+    await db.delete(candidatos).where(eq(candidatos.id, id));
+    
+    // Registra na auditoria quem excluiu e o que foi excluído
+    await registrarLogAuditoria("EXCLUIR", "candidatos", id, `Excluiu o candidato: ${nome}`);
+    
+    revalidatePath("/recrutamento");
+    return { sucesso: true };
+  } catch (error) {
+    return { erro: "Erro ao excluir o candidato. Tente novamente." };
   }
 }

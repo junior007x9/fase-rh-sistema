@@ -7,9 +7,12 @@ import { getSessaoUsuario } from "./auth";
 import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
+import { eq } from "drizzle-orm"; // <-- Importação do eq adicionada
+import { registrarLogAuditoria } from "./auditoria"; // <-- Importação da auditoria adicionada
 
+// 1. Função para Cadastrar Novo Usuário
 export async function cadastrarUsuario(formData: FormData) {
-  // 1. Verificação de Segurança de Nível de Acesso
+  // Verificação de Segurança de Nível de Acesso
   const sessao = await getSessaoUsuario();
   if (!sessao || sessao.role !== "DIRETORIA") {
     throw new Error("Acesso negado. Apenas a Diretoria pode gerenciar acessos.");
@@ -25,23 +28,42 @@ export async function cadastrarUsuario(formData: FormData) {
   }
 
   try {
-    // 2. Criptografa a senha do novo usuário
+    // Criptografa a senha do novo usuário
     const hashSenha = await bcrypt.hash(senha, 10);
+    const novoId = randomUUID();
 
-    // 3. Salva no banco de dados
+    // Salva no banco de dados
     await db.insert(usuarios).values({
-      id: randomUUID(),
+      id: novoId,
       nome,
       email,
       senha: hashSenha,
       role,
     });
 
+    // Registra a ação na auditoria
+    await registrarLogAuditoria("CRIAR", "usuarios", novoId, `Cadastrou o usuário: ${nome} (${email}) com perfil ${role}`);
+
   } catch (error) {
     console.error(error);
     throw new Error("Erro ao criar usuário. Este e-mail já pode estar em uso.");
   }
 
-  // 4. Atualiza a tela
-  revalidatePath("/usuarios");
+  // Atualiza a tela de Gestão de Acessos
+  revalidatePath("/gestao-acessos");
+}
+
+// 2. Função para Excluir Usuário com Auditoria
+export async function excluirUsuario(id: string, email: string) {
+  try {
+    await db.delete(usuarios).where(eq(usuarios.id, id));
+    
+    // Registra na auditoria quem excluiu o usuário
+    await registrarLogAuditoria("EXCLUIR", "usuarios", id, `Excluiu o acesso do usuário: ${email}`);
+    
+    revalidatePath("/gestao-acessos");
+    return { sucesso: true };
+  } catch (error) {
+    return { erro: "Erro ao excluir o usuário." };
+  }
 }

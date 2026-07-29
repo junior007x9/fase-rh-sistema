@@ -1,8 +1,12 @@
 // Arquivo: app/ausencias/page.tsx
+export const dynamic = 'force-dynamic'; // Fim do cache fantasma!
+
 import { db } from "../../db/index";
 import { eventosAusencia, dadosPessoais } from "../../db/schema";
 import { eq } from "drizzle-orm";
 import { Clock, PlusCircle } from "lucide-react";
+import BotaoExcluir from "../components/BotaoExcluir";
+import { salvarEventoAusencia, excluirAusencia } from "../actions/ausencias";
 
 export default async function AusenciasPage() {
   let listaAusencias: any[] = [];
@@ -49,7 +53,8 @@ export default async function AusenciasPage() {
             <PlusCircle size={20} className="text-blue-600" /> Registrar Afastamento
           </h2>
           
-          <form action="/api/ausencias" method="POST" className="space-y-4">
+          {/* CORREÇÃO: Usando a ação de servidor direta, mais seguro e rápido! */}
+          <form action={salvarEventoAusencia} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Servidor</label>
               <select name="servidorId" required className="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500">
@@ -105,26 +110,35 @@ export default async function AusenciasPage() {
                   <th className="pb-3 font-semibold">Tipo</th>
                   <th className="pb-3 font-semibold">Início</th>
                   <th className="pb-3 font-semibold">Fim</th>
+                  <th className="pb-3 font-semibold text-right">Ações</th> {/* NOVA COLUNA */}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
                 {listaAusencias.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="py-6 text-center text-slate-400">
+                    <td colSpan={5} className="py-6 text-center text-slate-400">
                       Nenhum afastamento registrado até o momento.
                     </td>
                   </tr>
                 ) : (
                   listaAusencias.map((item: any) => (
-                    <tr key={item.id} className="hover:bg-slate-50">
+                    <tr key={item.id} className="hover:bg-slate-50 group">
                       <td className="py-3 font-medium text-slate-800">{item.servidorNome || "Servidor não encontrado"}</td>
                       <td className="py-3">
                         <span className="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-md text-xs font-semibold border border-amber-100">
                           {item.tipo}
                         </span>
                       </td>
-                      <td className="py-3">{item.inicio}</td>
-                      <td className="py-3">{item.fim}</td>
+                      <td className="py-3">{new Date(item.inicio).toLocaleDateString('pt-BR')}</td>
+                      <td className="py-3">{new Date(item.fim).toLocaleDateString('pt-BR')}</td>
+                      <td className="py-3 text-right opacity-50 group-hover:opacity-100 transition-opacity">
+                        {/* AQUI ESTÁ O BOTÃO COM AUDITORIA! */}
+                        <BotaoExcluir 
+                          id={item.id} 
+                          nomeRegistro={`${item.servidorNome || 'Desconhecido'} (${item.tipo})`} 
+                          acaoExcluir={excluirAusencia as any} 
+                        />
+                      </td>
                     </tr>
                   ))
                 )}

@@ -3,7 +3,8 @@ import { db } from "../../db/index";
 import { candidatos } from "../../db/schema";
 import { desc } from "drizzle-orm";
 import { UserPlus, Users, SearchCheck } from "lucide-react";
-import { registrarCandidato, atualizarStatusCandidato } from "../actions/recrutamento";
+import BotaoExcluir from "../components/BotaoExcluir";
+import { registrarCandidato, atualizarStatusCandidato, excluirCandidato } from "../actions/recrutamento";
 
 export const dynamic = "force-dynamic";
 
@@ -91,19 +92,20 @@ export default async function RecrutamentoPage() {
                   <th className="py-3 px-4 font-semibold text-slate-600 w-1/4">Candidato</th>
                   <th className="py-3 px-4 font-semibold text-slate-600 w-1/4">Qualificação / Área</th>
                   <th className="py-3 px-4 font-semibold text-slate-600 w-1/4">Contato</th>
-                  <th className="py-3 px-4 font-semibold text-slate-600 w-1/4 text-center">Status / Ação</th>
+                  <th className="py-3 px-4 font-semibold text-slate-600 text-center">Status</th>
+                  <th className="py-3 px-4 font-semibold text-slate-600 text-center">Excluir</th>
                 </tr>
               </thead>
               <tbody>
                 {listaCandidatos.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="py-8 text-center text-gray-500">
+                    <td colSpan={5} className="py-8 text-center text-gray-500">
                       Nenhum candidato registrado no banco de talentos.
                     </td>
                   </tr>
                 ) : (
                   listaCandidatos.map((candidato) => (
-                    <tr key={candidato.id} className="border-b border-gray-100 hover:bg-slate-50 transition-colors">
+                    <tr key={candidato.id} className="border-b border-gray-100 hover:bg-slate-50 transition-colors group">
                       {/* Dados Básicos */}
                       <td className="py-3 px-4">
                         <p className="font-bold text-gray-900">{candidato.nome}</p>
@@ -149,6 +151,15 @@ export default async function RecrutamentoPage() {
                             Atualizar
                           </button>
                         </form>
+                      </td>
+
+                      {/* Lixeira de Exclusão com Auditoria */}
+                      <td className="py-3 px-4 text-center opacity-50 group-hover:opacity-100 transition-opacity">
+                        <BotaoExcluir 
+                          id={candidato.id} 
+                          nomeRegistro={candidato.nome} 
+                          acaoExcluir={excluirCandidato as any} 
+                        />
                       </td>
                     </tr>
                   ))

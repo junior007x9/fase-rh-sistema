@@ -6,8 +6,9 @@ import { periodosAquisitivos, eventosAusencia } from "../../db/schema";
 import { getSessaoUsuario } from "./auth";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation"; // <-- Importação do redirect adicionada
 import { eq } from "drizzle-orm";
-import { registrarLogAuditoria } from "./auditoria"; // <-- Importação da auditoria adicionada
+import { registrarLogAuditoria } from "./auditoria";
 
 // 1. Criar Período Aquisitivo de Férias
 export async function salvarPeriodoAquisitivo(formData: FormData) {
@@ -87,4 +88,40 @@ export async function excluirAusencia(id: string, detalhes: string) {
   } catch (error) {
     return { erro: "Erro ao excluir a ausência. Tente novamente." };
   }
+}
+
+// ==========================================
+// 4. NOVA FUNÇÃO: ATUALIZAR AUSÊNCIA (EDIÇÃO)
+// ==========================================
+export async function atualizarAusencia(formData: FormData) {
+  const sessao = await getSessaoUsuario();
+  if (!sessao) throw new Error("Acesso negado.");
+
+  const id = formData.get("id") as string;
+  const servidorId = formData.get("servidorId") as string;
+  const tipoAusencia = formData.get("tipoAusencia") as string;
+  const dataInicio = formData.get("dataInicio") as string;
+  const dataFim = formData.get("dataFim") as string;
+  const observacao = formData.get("observacao") as string;
+  const periodoAquisitivoId = formData.get("periodoAquisitivoId") as string | null;
+
+  try {
+    await db.update(eventosAusencia).set({
+      servidorId,
+      tipoAusencia: tipoAusencia as any,
+      dataInicio,
+      dataFim,
+      observacao: observacao || null,
+      periodoAquisitivoId: periodoAquisitivoId || undefined,
+    }).where(eq(eventosAusencia.id, id));
+
+    await registrarLogAuditoria("EDITAR", "eventos_ausencia", id, `Corrigiu o afastamento do tipo: ${tipoAusencia}`);
+  } catch (error) {
+    throw new Error("Erro ao atualizar o afastamento.");
+  }
+
+  // Atualiza as telas e redireciona limpando a URL
+  revalidatePath(`/servidores/${servidorId}/ausencias`);
+  revalidatePath("/ausencias");
+  redirect("/ausencias"); 
 }

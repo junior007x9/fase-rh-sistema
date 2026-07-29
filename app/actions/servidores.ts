@@ -7,6 +7,8 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSessaoUsuario } from "./auth";
+import { eq } from "drizzle-orm"; // <-- Importação do eq adicionada
+import { registrarLogAuditoria } from "./auditoria"; // <-- Importação da auditoria
 
 export async function cadastrarServidor(formData: FormData) {
   const sessao = await getSessaoUsuario();
@@ -69,11 +71,37 @@ export async function cadastrarServidor(formData: FormData) {
       pisPasep: pisPasep || null,
     });
 
+    // Registra na auditoria
+    await registrarLogAuditoria("CRIAR", "servidores", servidorId, `Cadastrou o servidor: ${nome} (CPF: ${cpf})`);
+
   } catch (error) {
     console.error("Erro no cadastro:", error);
     throw new Error("Erro ao salvar servidor. Verifique se o CPF, RG ou E-mail já existem.");
   }
 
   revalidatePath("/servidores");
+  revalidatePath("/"); // Atualiza o Dashboard
   redirect(`/servidores/${servidorId}`);
+}
+
+// 4. NOVA FUNÇÃO: EXCLUIR SERVIDOR COM SEGURANÇA E AUDITORIA
+export async function excluirServidor(id: string, nome: string) {
+  try {
+    // Exclui as dependências nas outras tabelas primeiro para evitar erro de chaves estrangeiras
+    await db.delete(documentos).where(eq(documentos.servidorId, id));
+    await db.delete(dadosPessoais).where(eq(dadosPessoais.servidorId, id));
+    
+    // Por fim, exclui o servidor principal
+    await db.delete(servidores).where(eq(servidores.id, id));
+    
+    // Registra na auditoria
+    await registrarLogAuditoria("EXCLUIR", "servidores", id, `Excluiu permanentemente o servidor: ${nome}`);
+    
+    revalidatePath("/servidores");
+    revalidatePath("/"); // Atualiza os KPIs do Dashboard
+    return { sucesso: true };
+  } catch (error) {
+    console.error("Erro ao excluir servidor:", error);
+    return { erro: "Erro ao excluir. Este servidor possui vínculos ativos (como férias ou ausências) que precisam ser removidos antes." };
+  }
 }

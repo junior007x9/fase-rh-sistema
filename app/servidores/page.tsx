@@ -2,8 +2,10 @@
 import { db } from "../../db/index";
 import { servidores, dadosPessoais, documentos, historicoFuncional, cargos, lotacoes } from "../../db/schema";
 import { eq, or, like, and, isNull } from "drizzle-orm";
-import { Search } from "lucide-react";
+import { Search, Pencil } from "lucide-react";
 import Link from "next/link";
+import BotaoExcluir from "../components/BotaoExcluir";
+import { excluirServidor } from "../actions/servidores";
 
 export const dynamic = "force-dynamic";
 
@@ -96,18 +98,19 @@ export default async function ServidoresPage({
                 <th className="py-3 px-4 font-semibold text-slate-600">Cargo / Lotação</th>
                 <th className="py-3 px-4 font-semibold text-slate-600">Admissão</th>
                 <th className="py-3 px-4 font-semibold text-slate-600 text-center">Status</th>
+                <th className="py-3 px-4 font-semibold text-slate-600 text-center">Ações</th>
               </tr>
             </thead>
             <tbody>
               {listaServidores.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-8 text-center text-gray-500">
+                  <td colSpan={5} className="py-8 text-center text-gray-500">
                     Nenhum servidor encontrado com os filtros aplicados.
                   </td>
                 </tr>
               ) : (
                 listaServidores.map((servidor) => (
-                  <tr key={servidor.id} className="border-b border-gray-100 hover:bg-slate-50">
+                  <tr key={servidor.id} className="border-b border-gray-100 hover:bg-slate-50 group transition-colors">
                     
                     <td className="py-3 px-4">
                       <p className="font-bold text-gray-900">{servidor.nome || "Sem nome"}</p>
@@ -134,6 +137,27 @@ export default async function ServidoresPage({
                       }`}>
                         {servidor.status}
                       </span>
+                    </td>
+
+                    {/* COLUNA DE AÇÕES COM LÁPIS E LIXEIRA */}
+                    <td className="py-3 px-4 text-center">
+                      <div className="flex items-center justify-center gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
+                        {/* Lápis de Edição (Abre o perfil completo do servidor) */}
+                        <Link 
+                          href={`/servidores/${servidor.id}`}
+                          className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 rounded-lg transition-colors shadow-sm"
+                          title="Ver / Editar Ficha do Servidor"
+                        >
+                          <Pencil size={16} />
+                        </Link>
+
+                        {/* Lixeira de Exclusão Segura */}
+                        <BotaoExcluir 
+                          id={servidor.id} 
+                          nomeRegistro={servidor.nome || "Servidor Desconhecido"} 
+                          acaoExcluir={excluirServidor as any} 
+                        />
+                      </div>
                     </td>
                     
                   </tr>

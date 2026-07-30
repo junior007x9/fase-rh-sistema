@@ -1,6 +1,6 @@
 // Arquivo: app/page.tsx
 import { db } from "../db/index";
-import { servidores, dadosPessoais, lotacoes, ausencias } from "../db/schema";
+import { servidores, dadosPessoais, lotacoes, eventosAusencia } from "../db/schema"; // <-- Nome corrigido aqui
 import { eq, sql } from "drizzle-orm";
 import { Users, UserMinus, MapPin, Briefcase, Gift, Calendar, BarChart3, PieChart } from "lucide-react";
 import Link from "next/link";
@@ -25,7 +25,7 @@ export default async function DashboardPage() {
   .groupBy(servidores.vinculo);
 
   // 🚀 BUSCANDO DADOS REAIS DE AUSÊNCIAS E LICENÇAS
-  const listaAusencias = await db.select().from(ausencias);
+  const listaAusencias = await db.select().from(eventosAusencia); // <-- Nome corrigido aqui
   const totalAfastados = listaAusencias.length; // Quantidade total cadastrada
 
   // Lógica do Gráfico de Ausências (Últimos 6 meses)
@@ -44,21 +44,18 @@ export default async function DashboardPage() {
 
   // Agrupando as ausências por mês no gráfico
   listaAusencias.forEach(aus => {
-    // Tenta usar a data de início para agrupar. Se não tiver, usa a data de criação
     const dataRef = (aus as any).dataInicio || (aus as any).criadoEm;
     if (dataRef) {
-      const [ano, mes] = dataRef.split('T')[0].split('-'); // Suporta padrão ISO ou YYYY-MM-DD
+      const [ano, mes] = dataRef.split('T')[0].split('-'); 
       const mesIndex = ultimos6Meses.findIndex(m => m.mes === parseInt(mes) && m.ano === parseInt(ano));
       if (mesIndex !== -1) {
         ultimos6Meses[mesIndex].val++;
       }
     } else {
-      // Se a ausência não tiver nenhuma data, joga no mês atual para refletir no gráfico
       ultimos6Meses[5].val++;
     }
   });
 
-  // Define um teto visual para o gráfico não quebrar se os números forem pequenos
   const maxAusencias = Math.max(...ultimos6Meses.map(m => m.val), 5); 
 
   // Buscando todos os servidores ativos para os Aniversariantes
@@ -165,7 +162,7 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          {/* GRÁFICO 2: Ausências e Licenças (AGORA DINÂMICO!) */}
+          {/* GRÁFICO 2: Ausências e Licenças */}
           <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm flex flex-col">
             <div className="flex items-center gap-2 mb-6">
               <BarChart3 className="text-orange-500" size={20} />
@@ -174,16 +171,13 @@ export default async function DashboardPage() {
             
             <div className="flex-1 flex items-end justify-between gap-2 h-40 mt-4 border-b border-gray-100 pb-2 relative">
               {ultimos6Meses.map((item, i) => {
-                // Calcula a altura da barra em porcentagem baseada no mês com maior número de ausências
                 const alturaBarra = Math.round((item.val / maxAusencias) * 100);
-                
                 return (
                   <div key={i} className="flex flex-col items-center flex-1 group h-full justify-end">
                     <div 
                       className="w-full max-w-[2.5rem] bg-orange-100 group-hover:bg-orange-500 rounded-t-md transition-colors relative flex items-end justify-center" 
                       style={{ height: `${alturaBarra}%`, minHeight: '4px' }}
                     >
-                      {/* O número aparece flutuando quando você passa o mouse por cima (hover) */}
                       <span className="absolute -top-7 text-xs font-bold text-orange-600 opacity-0 group-hover:opacity-100 transition-opacity">
                         {item.val}
                       </span>

@@ -20,6 +20,8 @@ export const lotacoes = sqliteTable('lotacoes', {
 export const servidores = sqliteTable('servidores', {
   id: text('id').primaryKey(),
   matricula: text('matricula'),
+  cargo: text('cargo'), // <-- ADICIONE ESTA LINHA
+  lotacao: text('lotacao'), // <-- ADICIONE ESTA LINHA
   vinculo: text('vinculo', { enum: ['EFETIVO', 'CONTRATADO', 'COMISSIONADO', 'ESTAGIARIO'] }).notNull(),
   dataAdmissao: text('data_admissao').notNull(),
   dataDesligamento: text('data_desligamento'), 

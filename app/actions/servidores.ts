@@ -16,10 +16,14 @@ export async function cadastrarServidor(formData: FormData) {
 
   const servidorId = randomUUID();
 
+  // Vínculo
   const matricula = formData.get("matricula") as string;
+  const cargo = formData.get("cargo") as string;
+  const lotacao = formData.get("lotacao") as string;
   const vinculo = formData.get("vinculo") as "EFETIVO" | "CONTRATADO" | "COMISSIONADO" | "ESTAGIARIO";
   const dataAdmissao = formData.get("dataAdmissao") as string;
 
+  // Dados Pessoais
   const nome = formData.get("nome") as string;
   const nomeSocial = formData.get("nomeSocial") as string;
   const dataNascimento = formData.get("dataNascimento") as string;
@@ -31,6 +35,7 @@ export async function cadastrarServidor(formData: FormData) {
   const genero = formData.get("genero") as string;
   const orientacaoSexual = formData.get("orientacaoSexual") as string;
 
+  // Documentos
   const cpf = formData.get("cpf") as string;
   const rg = formData.get("rg") as string;
   const tituloEleitoral = formData.get("tituloEleitoral") as string;
@@ -40,6 +45,8 @@ export async function cadastrarServidor(formData: FormData) {
     await db.insert(servidores).values({
       id: servidorId,
       matricula: matricula || null,
+      cargo: cargo || null,
+      lotacao: lotacao || null,
       vinculo,
       dataAdmissao,
       status: "ATIVO",
@@ -67,11 +74,9 @@ export async function cadastrarServidor(formData: FormData) {
       pisPasep: pisPasep || null,
     });
 
-    await registrarLogAuditoria("CRIAR", "servidores", servidorId, `Cadastrou o servidor: ${nome} (Matrícula: ${matricula || 'N/A'})`);
-
+    await registrarLogAuditoria("CRIAR", "servidores", servidorId, `Cadastrou o servidor: ${nome}`);
   } catch (error) {
-    console.error("Erro no cadastro:", error);
-    throw new Error("Erro ao salvar servidor. Verifique se a Matrícula, CPF, RG ou E-mail já existem.");
+    throw new Error("Erro ao salvar servidor. Verifique se os dados únicos já existem.");
   }
 
   revalidatePath("/servidores");
@@ -86,6 +91,8 @@ export async function atualizarServidor(formData: FormData) {
   const servidorId = formData.get("id") as string;
 
   const matricula = formData.get("matricula") as string;
+  const cargo = formData.get("cargo") as string;
+  const lotacao = formData.get("lotacao") as string;
   const vinculo = formData.get("vinculo") as "EFETIVO" | "CONTRATADO" | "COMISSIONADO" | "ESTAGIARIO";
   const dataAdmissao = formData.get("dataAdmissao") as string;
 
@@ -108,6 +115,8 @@ export async function atualizarServidor(formData: FormData) {
   try {
     await db.update(servidores).set({
       matricula: matricula || null,
+      cargo: cargo || null,
+      lotacao: lotacao || null,
       vinculo,
       dataAdmissao,
     }).where(eq(servidores.id, servidorId));
@@ -132,11 +141,9 @@ export async function atualizarServidor(formData: FormData) {
       pisPasep: pisPasep || null,
     }).where(eq(documentos.servidorId, servidorId));
 
-    await registrarLogAuditoria("EDITAR", "servidores", servidorId, `Atualizou os dados principais do servidor: ${nome}`);
-
+    await registrarLogAuditoria("EDITAR", "servidores", servidorId, `Atualizou os dados de: ${nome}`);
   } catch (error) {
-    console.error("Erro na atualização:", error);
-    throw new Error("Erro ao atualizar servidor. Verifique se os dados únicos (CPF/E-mail) já existem em outro registro.");
+    throw new Error("Erro ao atualizar servidor.");
   }
 
   revalidatePath("/servidores");
@@ -153,10 +160,8 @@ export async function excluirServidor(id: string, nome: string) {
     await registrarLogAuditoria("EXCLUIR", "servidores", id, `Excluiu permanentemente o servidor: ${nome}`);
     
     revalidatePath("/servidores");
-    revalidatePath("/");
     return { sucesso: true };
   } catch (error) {
-    console.error("Erro ao excluir servidor:", error);
     return { erro: "Erro ao excluir. Este servidor possui vínculos ativos." };
   }
 }

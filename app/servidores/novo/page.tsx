@@ -144,7 +144,7 @@ export default function NovoServidorPage() {
           </div>
         </section>
 
-        {/* SESSÃO 4: VÍNCULO INSTITUCIONAL (COM MATRÍCULA) */}
+        {/* SESSÃO 4: VÍNCULO INSTITUCIONAL (Com Cargo e Lotação) */}
         <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <div className="flex items-center gap-2 border-b pb-4 mb-6">
             <Briefcase className="text-blue-600" />
@@ -167,6 +167,14 @@ export default function NovoServidorPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Data de Admissão *</label>
               <input type="date" name="dataAdmissao" required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+            </div>
+            <div className="md:col-span-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Cargo *</label>
+              <input type="text" name="cargo" required placeholder="Ex: Enfermeiro, Analista..." className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Lotação (Setor/Secretaria) *</label>
+              <input type="text" name="lotacao" required placeholder="Ex: Secretaria de Saúde, RH..." className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
             </div>
           </div>
         </section>

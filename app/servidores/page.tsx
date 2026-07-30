@@ -10,10 +10,12 @@ import { excluirServidor } from "../actions/servidores";
 export const dynamic = "force-dynamic";
 
 export default async function ServidoresPage() {
-  // Busca todos os servidores cruzando os dados pessoais e documentos
+  // Busca todos os servidores puxando os novos campos cargo e lotacao
   const listaServidores = await db.select({
     id: servidores.id,
     matricula: servidores.matricula,
+    cargo: servidores.cargo,
+    lotacao: servidores.lotacao,
     vinculo: servidores.vinculo,
     status: servidores.status,
     nome: dadosPessoais.nome,
@@ -47,7 +49,7 @@ export default async function ServidoresPage() {
           <Search size={18} />
           <input 
             type="text" 
-            placeholder="Buscar por nome, matrícula ou CPF..." 
+            placeholder="Buscar por nome, matrícula, cargo ou CPF..." 
             className="w-full bg-transparent outline-none text-sm"
           />
         </div>
@@ -58,7 +60,7 @@ export default async function ServidoresPage() {
               <tr>
                 <th className="p-4">Matrícula</th>
                 <th className="p-4">Nome do Servidor</th>
-                <th className="p-4">CPF</th>
+                <th className="p-4">Cargo / Lotação</th>
                 <th className="p-4">Vínculo</th>
                 <th className="p-4">Status</th>
                 <th className="p-4 text-right">Ações</th>
@@ -77,8 +79,14 @@ export default async function ServidoresPage() {
                     <td className="p-4 font-mono text-slate-600 font-medium">
                       {srv.matricula || <span className="text-gray-400 text-xs italic">Não gerada</span>}
                     </td>
-                    <td className="p-4 font-bold text-gray-900">{srv.nome}</td>
-                    <td className="p-4 text-gray-600">{srv.cpf}</td>
+                    <td className="p-4">
+                      <p className="font-bold text-gray-900">{srv.nome}</p>
+                      <p className="text-xs text-gray-500">CPF: {srv.cpf}</p>
+                    </td>
+                    <td className="p-4">
+                      <p className="font-semibold text-gray-800">{srv.cargo || "-"}</p>
+                      <p className="text-xs text-gray-500">{srv.lotacao || "-"}</p>
+                    </td>
                     <td className="p-4 text-gray-600">{srv.vinculo}</td>
                     <td className="p-4">
                       {srv.status === "ATIVO" ? (

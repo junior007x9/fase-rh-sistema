@@ -1,26 +1,27 @@
 // Arquivo: app/servidores/[id]/page.tsx
 import { db } from "../../../db/index";
 import { 
-  servidores, dadosPessoais, documentos, enderecos, dadosBancarios, contatosEmergencia, dependentesPensionistas 
+  servidores, dadosPessoais, documentos, enderecos, dadosBancarios, 
+  dependentesPensionistas, historicoTransferencias, lotacoes 
 } from "../../../db/schema";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import Link from "next/link";
 import { 
-  ArrowLeft, MapPin, Landmark, Users, FileWarning, Clock, ShieldAlert, Pencil, X, Briefcase, DollarSign
+  ArrowLeft, MapPin, Landmark, Users, FileWarning, Clock, ShieldAlert, 
+  Pencil, X, Briefcase, DollarSign, ArrowRightLeft, History
 } from "lucide-react";
 import BotaoExcluir from "../../components/BotaoExcluir";
 import { salvarEndereco, atualizarEndereco, excluirEndereco, salvarContaBancaria, atualizarContaBancaria, excluirContaBancaria } from "../../actions/anexos";
 import { salvarDependente, atualizarDependente, excluirDependente, registrarDesligamento, atualizarDesligamento, excluirDesligamento } from "../../actions/complementos";
+import { registrarTransferencia } from "../../actions/folha";
 
 export const dynamic = "force-dynamic";
 
-// Função para formatar moeda
 function formatarMoeda(valor: number | null | undefined) {
   if (valor === null || valor === undefined) return "Não informada";
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
 }
 
-// Função para calcular o Tempo de Casa
 function calcularTempoDeCasa(admissao: string, desligamento: string | null) {
   const dataInicio = new Date(admissao);
   const dataFim = desligamento ? new Date(desligamento) : new Date();
@@ -39,7 +40,7 @@ export default async function PerfilServidorPage({
   searchParams 
 }: { 
   params: Promise<{ id: string }>, 
-  searchParams: Promise<{ editarDependente?: string, editarEndereco?: string, editarBanco?: string, editarDesligamento?: string }> 
+  searchParams: Promise<{ editarDependente?: string, editarEndereco?: string, editarBanco?: string, editarDesligamento?: string, novaTransferencia?: string }> 
 }) {
   const resolvedParams = await params;
   const servidorId = resolvedParams.id;
@@ -49,13 +50,22 @@ export default async function PerfilServidorPage({
   const editarEndereco = resolvedSearchParams?.editarEndereco === "true";
   const editarBanco = resolvedSearchParams?.editarBanco === "true";
   const editarDesligamento = resolvedSearchParams?.editarDesligamento === "true";
+  const abrirTransferencia = resolvedSearchParams?.novaTransferencia === "true";
 
   const [servidorBase] = await db.select().from(servidores).where(eq(servidores.id, servidorId));
   const [pessoal] = await db.select().from(dadosPessoais).where(eq(dadosPessoais.servidorId, servidorId));
   const [docs] = await db.select().from(documentos).where(eq(documentos.servidorId, servidorId));
   const [endereco] = await db.select().from(enderecos).where(eq(enderecos.servidorId, servidorId));
   const [banco] = await db.select().from(dadosBancarios).where(eq(dadosBancarios.servidorId, servidorId));
+  
   const listaDependentes = await db.select().from(dependentesPensionistas).where(eq(dependentesPensionistas.servidorId, servidorId));
+  const listaLotacoes = await db.select().from(lotacoes);
+  
+  // Busca o Histórico de Transferências (do mais recente pro mais antigo)
+  const historicoMovimentacoes = await db.select()
+    .from(historicoTransferencias)
+    .where(eq(historicoTransferencias.servidorId, servidorId))
+    .orderBy(desc(historicoTransferencias.dataOcorrencia));
 
   if (!servidorBase || !pessoal) {
     return <div className="p-8 text-center text-red-500 font-bold">Servidor não encontrado.</div>;
@@ -92,12 +102,21 @@ export default async function PerfilServidorPage({
             </p>
           </div>
         </div>
-        <Link 
-          href={`/servidores/${servidorId}/ausencias`} 
-          className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm"
-        >
-          Gerenciar Férias e Ausências
-        </Link>
+        <div className="flex gap-2">
+          <Link 
+            href={`/servidores/${servidorId}?novaTransferencia=true`} 
+            scroll={false}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm flex items-center gap-2"
+          >
+            <ArrowRightLeft size={16} /> Transferir Lotação
+          </Link>
+          <Link 
+            href={`/servidores/${servidorId}/ausencias`} 
+            className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm"
+          >
+            Gerenciar Férias
+          </Link>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -107,10 +126,7 @@ export default async function PerfilServidorPage({
 
           {/* VÍNCULO INSTITUCIONAL E FOLHA */}
           <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden">
-            
-            {/* Faixa decorativa lateral esquerda para dar destaque */}
             <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500"></div>
-
             <div className="flex items-center justify-between border-b pb-4 mb-4">
               <div className="flex items-center gap-2">
                 <Briefcase className="text-blue-600" />
@@ -130,32 +146,97 @@ export default async function PerfilServidorPage({
               <div><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">Lotação Atual</span>{servidorBase.lotacao || "Não informada"}</div>
               <div><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">Data de Admissão</span>{servidorBase.dataAdmissao}</div>
               
-              {/* ---- NOVOS CAMPOS PARA FOLHA ---- */}
               <div className="col-span-2 border-t pt-4 mt-2 grid grid-cols-2 gap-4">
                 <div className="col-span-2"><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider mb-1">Função (Comissionada/Gratificada)</span>
                   {servidorBase.funcao ? (
                     <span className="inline-block px-2.5 py-1 bg-amber-100 text-amber-800 font-medium rounded text-xs">{servidorBase.funcao}</span>
                   ) : "Nenhuma"}
                 </div>
-                
                 <div>
-                  <span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider flex items-center gap-1">
-                    <Clock size={12}/> Jornada de Trabalho
-                  </span>
+                  <span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider flex items-center gap-1"><Clock size={12}/> Jornada de Trabalho</span>
                   {servidorBase.jornada || "Não informada"}
                 </div>
-                
                 <div>
-                  <span className="font-semibold block text-xs text-green-700 uppercase tracking-wider flex items-center gap-1">
-                    <DollarSign size={12}/> Remuneração Base
-                  </span>
+                  <span className="font-semibold block text-xs text-green-700 uppercase tracking-wider flex items-center gap-1"><DollarSign size={12}/> Remuneração Base</span>
                   <span className="text-base font-bold text-gray-900">{formatarMoeda(servidorBase.remuneracaoBase)}</span>
                 </div>
               </div>
-              {/* ---------------------------------- */}
             </div>
           </section>
-          
+
+          {/* NOVO: HISTÓRICO DE TRANSFERÊNCIAS */}
+          <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex items-center justify-between border-b pb-4 mb-4">
+              <div className="flex items-center gap-2">
+                <History className="text-blue-600" />
+                <h2 className="text-xl font-semibold text-gray-800">Histórico de Movimentações</h2>
+              </div>
+              {abrirTransferencia && (
+                <Link href={`/servidores/${servidorId}`} scroll={false} className="text-gray-400 hover:text-red-500"><X size={20} /></Link>
+              )}
+            </div>
+
+            {/* FORMULÁRIO DE TRANSFERÊNCIA (Só aparece se clicar no botão lá no topo) */}
+            {abrirTransferencia && (
+              <form action={registrarTransferencia} className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-4 shadow-inner">
+                <input type="hidden" name="servidorId" value={servidorId} />
+                <input type="hidden" name="lotacaoAnterior" value={servidorBase.lotacao || ""} />
+                
+                <p className="text-sm text-blue-800 font-medium border-b border-blue-200 pb-2">Registrar nova transferência</p>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Nova Lotação (Para onde vai?) *</label>
+                    <select name="lotacaoNova" required className="w-full border p-2.5 text-sm rounded-md bg-white outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="">Selecione o novo setor...</option>
+                      {listaLotacoes.map((l) => (
+                        <option key={l.id} value={l.nome}>{l.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Data da Ocorrência *</label>
+                    <input type="date" name="dataOcorrencia" required className="w-full border p-2.5 text-sm rounded-md bg-white outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Motivo (Opcional)</label>
+                    <input type="text" name="motivo" placeholder="Ex: Portaria Nº 123/2026" className="w-full border p-2.5 text-sm rounded-md bg-white outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                </div>
+                <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold p-2.5 rounded-md transition-colors flex items-center justify-center gap-2">
+                  <ArrowRightLeft size={16} /> Confirmar Transferência
+                </button>
+              </form>
+            )}
+
+            {/* LISTA DO HISTÓRICO */}
+            <div className="space-y-3 relative">
+              {historicoMovimentacoes.length === 0 ? (
+                <p className="text-sm text-gray-500 italic text-center py-4">Nenhuma transferência registrada.</p>
+              ) : (
+                <div className="absolute left-3 top-2 bottom-2 w-px bg-gray-200 z-0"></div>
+              )}
+
+              {historicoMovimentacoes.map((mov, index) => (
+                <div key={mov.id} className="relative z-10 flex gap-4 items-start">
+                  <div className="mt-1 w-6 h-6 rounded-full bg-blue-100 border-2 border-white flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                  </div>
+                  <div className="bg-gray-50 border border-gray-100 p-3 rounded-lg flex-1 shadow-sm">
+                    <div className="flex justify-between items-start mb-1">
+                      <p className="text-sm font-bold text-gray-800">{mov.lotacaoNova}</p>
+                      <span className="text-xs font-semibold text-gray-500 bg-gray-200 px-2 py-0.5 rounded">{mov.dataOcorrencia.split('-').reverse().join('/')}</span>
+                    </div>
+                    <p className="text-xs text-gray-600">
+                      <span className="font-semibold">Saiu de:</span> {mov.lotacaoAnterior || "Registro Inicial"}
+                    </p>
+                    {mov.motivo && <p className="text-xs text-gray-500 mt-1 italic">Motivo: {mov.motivo}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
           {/* DEPENDENTES E PENSIONISTAS */}
           <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
             <div className="flex items-center justify-between border-b pb-4 mb-4">
@@ -213,6 +294,11 @@ export default async function PerfilServidorPage({
             ))}
           </section>
 
+        </div>
+
+        {/* COLUNA DIREITA */}
+        <div className="space-y-8">
+          
           {/* ENDEREÇO RESIDENCIAL */}
           <section className={`p-6 rounded-xl border shadow-sm transition-colors ${editarEndereco ? 'bg-amber-50 border-amber-300' : 'bg-white border-gray-200'}`}>
              <div className="flex items-center justify-between border-b pb-4 mb-4">
@@ -259,11 +345,48 @@ export default async function PerfilServidorPage({
             )}
           </section>
 
-        </div>
+          {/* DADOS BANCÁRIOS */}
+          <section className={`p-6 rounded-xl border shadow-sm transition-colors ${editarBanco ? 'bg-amber-50 border-amber-300' : 'bg-white border-gray-200'}`}>
+            <div className="flex items-center justify-between border-b pb-4 mb-4">
+              <div className="flex items-center gap-2">
+                <Landmark className="text-blue-600" />
+                <h2 className="text-xl font-semibold text-gray-800">Dados Bancários</h2>
+              </div>
+              {banco && !editarBanco && (
+                <div className="flex gap-2">
+                  <Link href={`/servidores/${servidorId}?editarBanco=true`} scroll={false} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"><Pencil size={16} /></Link>
+                  <BotaoExcluir id={banco.id} nomeRegistro="Conta Bancária" acaoExcluir={excluirContaBancaria as any} />
+                </div>
+              )}
+              {editarBanco && (
+                <Link href={`/servidores/${servidorId}`} scroll={false} className="text-gray-400 hover:text-red-500"><X size={20} /></Link>
+              )}
+            </div>
+            
+            {banco && !editarBanco ? (
+               <div className="text-sm text-gray-700 space-y-2">
+                <p><span className="font-semibold">Titular:</span> {banco.nomeTitular}</p>
+                <p><span className="font-semibold">Banco:</span> {banco.banco}</p>
+                <p><span className="font-semibold">Agência/Conta:</span> {banco.agencia} / {banco.conta}</p>
+              </div>
+            ) : (
+              <form action={banco ? atualizarContaBancaria : salvarContaBancaria} className="space-y-3">
+                <input type="hidden" name="servidorId" value={servidorId} />
+                {banco && <input type="hidden" name="id" value={banco.id} />}
+                
+                <div><input type="text" name="nomeTitular" defaultValue={banco?.nomeTitular || ""} placeholder="Nome Completo do Titular" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-1"><input type="text" name="banco" defaultValue={banco?.banco || ""} placeholder="Banco" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
+                  <div className="col-span-1"><input type="text" name="agencia" defaultValue={banco?.agencia || ""} placeholder="Agência" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
+                  <div className="col-span-1"><input type="text" name="conta" defaultValue={banco?.conta || ""} placeholder="Conta" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
+                </div>
+                <button type="submit" className={`w-full text-white p-2 rounded-md text-sm font-bold transition-colors ${banco ? 'bg-amber-600 hover:bg-amber-700' : 'bg-slate-900 hover:bg-slate-800'}`}>
+                  {banco ? "Salvar Alterações" : "Salvar Dados Bancários"}
+                </button>
+              </form>
+            )}
+          </section>
 
-        {/* COLUNA DIREITA */}
-        <div className="space-y-8">
-          
           {/* DESLIGAMENTO INSTITUCIONAL */}
           <section className={`p-6 rounded-xl border shadow-sm transition-colors ${editarDesligamento ? 'bg-amber-50 border-amber-300' : 'bg-white border-red-200'}`}>
             <div className="flex items-center justify-between border-b border-red-100 pb-4 mb-4">
@@ -307,48 +430,6 @@ export default async function PerfilServidorPage({
                 </div>
                 <button type="submit" className={`w-full text-white p-2 rounded-md text-sm font-bold flex justify-center items-center gap-2 transition-colors ${editarDesligamento ? 'bg-amber-600 hover:bg-amber-700' : 'bg-red-600 hover:bg-red-700'}`}>
                   {editarDesligamento ? "Salvar Correção" : <><ShieldAlert size={16} /> Confirmar Desligamento</>}
-                </button>
-              </form>
-            )}
-          </section>
-
-          {/* DADOS BANCÁRIOS */}
-          <section className={`p-6 rounded-xl border shadow-sm transition-colors ${editarBanco ? 'bg-amber-50 border-amber-300' : 'bg-white border-gray-200'}`}>
-            <div className="flex items-center justify-between border-b pb-4 mb-4">
-              <div className="flex items-center gap-2">
-                <Landmark className="text-blue-600" />
-                <h2 className="text-xl font-semibold text-gray-800">Dados Bancários</h2>
-              </div>
-              {banco && !editarBanco && (
-                <div className="flex gap-2">
-                  <Link href={`/servidores/${servidorId}?editarBanco=true`} scroll={false} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"><Pencil size={16} /></Link>
-                  <BotaoExcluir id={banco.id} nomeRegistro="Conta Bancária" acaoExcluir={excluirContaBancaria as any} />
-                </div>
-              )}
-              {editarBanco && (
-                <Link href={`/servidores/${servidorId}`} scroll={false} className="text-gray-400 hover:text-red-500"><X size={20} /></Link>
-              )}
-            </div>
-            
-            {banco && !editarBanco ? (
-               <div className="text-sm text-gray-700 space-y-2">
-                <p><span className="font-semibold">Titular:</span> {banco.nomeTitular}</p>
-                <p><span className="font-semibold">Banco:</span> {banco.banco}</p>
-                <p><span className="font-semibold">Agência/Conta:</span> {banco.agencia} / {banco.conta}</p>
-              </div>
-            ) : (
-              <form action={banco ? atualizarContaBancaria : salvarContaBancaria} className="space-y-3">
-                <input type="hidden" name="servidorId" value={servidorId} />
-                {banco && <input type="hidden" name="id" value={banco.id} />}
-                
-                <div><input type="text" name="nomeTitular" defaultValue={banco?.nomeTitular || ""} placeholder="Nome Completo do Titular" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="col-span-1"><input type="text" name="banco" defaultValue={banco?.banco || ""} placeholder="Banco" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
-                  <div className="col-span-1"><input type="text" name="agencia" defaultValue={banco?.agencia || ""} placeholder="Agência" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
-                  <div className="col-span-1"><input type="text" name="conta" defaultValue={banco?.conta || ""} placeholder="Conta" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
-                </div>
-                <button type="submit" className={`w-full text-white p-2 rounded-md text-sm font-bold transition-colors ${banco ? 'bg-amber-600 hover:bg-amber-700' : 'bg-slate-900 hover:bg-slate-800'}`}>
-                  {banco ? "Salvar Alterações" : "Salvar Dados Bancários"}
                 </button>
               </form>
             )}

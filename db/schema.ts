@@ -170,3 +170,32 @@ export const auditoriaLogs = sqliteTable('auditoria_logs', {
   detalhes: text('detalhes'), // O que mudou (pode salvar JSON aqui)
   criadoEm: text('criado_em').default(sql`CURRENT_TIMESTAMP`),
 });
+// Adicione no final do arquivo db/schema.ts
+
+// ==========================================
+// MÓDULO: HISTÓRICO DE TRANSFERÊNCIAS
+// ==========================================
+export const historicoTransferencias = sqliteTable('historico_transferencias', {
+  id: text('id').primaryKey(),
+  servidorId: text('servidor_id').notNull().references(() => servidores.id),
+  lotacaoAnterior: text('lotacao_anterior'), // De onde ele saiu
+  lotacaoNova: text('lotacao_nova').notNull(), // Para onde ele foi
+  dataOcorrencia: text('data_ocorrencia').notNull(), // Data exata da mudança
+  motivo: text('motivo'),
+  criadoEm: text('criado_em').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// ==========================================
+// MÓDULO: FOLHA DE PAGAMENTO (LANÇAMENTOS)
+// ==========================================
+export const lancamentosFolha = sqliteTable('lancamentos_folha', {
+  id: text('id').primaryKey(),
+  servidorId: text('servidor_id').notNull().references(() => servidores.id),
+  mesAno: text('mes_ano').notNull(), // Ex: "07-2026"
+  codigoEvento: text('codigo_evento').notNull(), // Ex: D001, P001
+  descricaoEvento: text('descricao_evento').notNull(), // Ex: "Falta", "DSR"
+  tipo: text('tipo', { enum: ['PROVENTO', 'DESCONTO'] }).notNull(),
+  quantidadeReferencia: real('quantidade_referencia'), // Ex: 2 (para 2 dias de falta)
+  valorFinal: real('valor_final').notNull(), // O valor em R$ calculado ou digitado
+  criadoEm: text('criado_em').default(sql`CURRENT_TIMESTAMP`),
+});

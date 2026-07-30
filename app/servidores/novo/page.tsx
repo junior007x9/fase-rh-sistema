@@ -13,10 +13,17 @@ export default function NovoServidorPage() {
   async function handleSubmit(formData: FormData) {
     setLoading(true);
     setErro("");
+    
     try {
       await cadastrarServidor(formData);
     } catch (error: any) {
-      setErro(error.message);
+      // O Next.js usa um erro interno para fazer o redirect. Não podemos bloqueá-lo!
+      if (error?.message && error.message.includes("NEXT_REDIRECT")) {
+        throw error; 
+      }
+      
+      // Se for um erro real (ex: CPF já existe), exibe na tela
+      setErro(error.message || "Ocorreu um erro ao salvar o servidor.");
       setLoading(false);
     }
   }
@@ -28,7 +35,7 @@ export default function NovoServidorPage() {
           <h1 className="text-3xl font-bold text-gray-900">Novo Servidor</h1>
           <p className="text-gray-500 mt-1">Preencha os dados de admissão do colaborador.</p>
         </div>
-        <Link href="/servidores" className="text-gray-500 hover:text-gray-700 font-medium">
+        <Link href="/servidores" className="text-gray-500 hover:text-gray-700 font-medium transition-colors">
           Voltar
         </Link>
       </header>
@@ -48,11 +55,26 @@ export default function NovoServidorPage() {
             <h2 className="text-xl font-semibold text-gray-800">Informações Básicas</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo *</label><input type="text" name="nome" required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Nome Social (Opcional)</label><input type="text" name="nomeSocial" className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Data de Nascimento *</label><input type="date" name="dataNascimento" required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Telefone *</label><input type="text" name="telefone" required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" /></div>
-            <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">E-mail Corporativo/Pessoal *</label><input type="email" name="email" required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" /></div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo *</label>
+              <input type="text" name="nome" required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nome Social (Opcional)</label>
+              <input type="text" name="nomeSocial" className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Data de Nascimento *</label>
+              <input type="date" name="dataNascimento" required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Telefone *</label>
+              <input type="text" name="telefone" required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">E-mail Corporativo/Pessoal *</label>
+              <input type="email" name="email" required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+            </div>
           </div>
         </section>
 
@@ -125,10 +147,22 @@ export default function NovoServidorPage() {
             <h2 className="text-xl font-semibold text-gray-800">Documentação</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">CPF *</label><input type="text" name="cpf" required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">RG *</label><input type="text" name="rg" required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Título Eleitoral *</label><input type="text" name="tituloEleitoral" required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">PIS/PASEP (Opcional se estagiário)</label><input type="text" name="pisPasep" className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" /></div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">CPF *</label>
+              <input type="text" name="cpf" required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">RG *</label>
+              <input type="text" name="rg" required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Título Eleitoral *</label>
+              <input type="text" name="tituloEleitoral" required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">PIS/PASEP (Opcional se estagiário)</label>
+              <input type="text" name="pisPasep" className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+            </div>
           </div>
         </section>
 
@@ -150,13 +184,17 @@ export default function NovoServidorPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Data de Admissão *</label>
-              <input type="date" name="dataAdmissao" required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500" />
+              <input type="date" name="dataAdmissao" required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
             </div>
           </div>
         </section>
 
         <div className="flex justify-end pt-4">
-          <button disabled={loading} type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-bold transition-colors shadow-md disabled:opacity-50">
+          <button 
+            disabled={loading} 
+            type="submit" 
+            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-bold transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             {loading ? "Salvando..." : "Cadastrar Servidor"}
           </button>
         </div>

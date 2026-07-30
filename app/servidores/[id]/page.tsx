@@ -6,10 +6,11 @@ import {
 import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { 
-  ArrowLeft, MapPin, Landmark, PhoneCall, Users, FileWarning, Clock, ShieldAlert 
+  ArrowLeft, MapPin, Landmark, PhoneCall, Users, FileWarning, Clock, ShieldAlert, Pencil, X 
 } from "lucide-react";
-import { salvarEndereco, salvarContaBancaria, salvarContatoEmergencia } from "../../actions/anexos";
-import { salvarDependente, registrarDesligamento } from "../../actions/complementos";
+import BotaoExcluir from "../../components/BotaoExcluir";
+import { salvarEndereco, atualizarEndereco, excluirEndereco, salvarContaBancaria, atualizarContaBancaria, excluirContaBancaria } from "../../actions/anexos";
+import { salvarDependente, atualizarDependente, excluirDependente, registrarDesligamento, atualizarDesligamento, excluirDesligamento } from "../../actions/complementos";
 
 export const dynamic = "force-dynamic";
 
@@ -27,8 +28,22 @@ function calcularTempoDeCasa(admissao: string, desligamento: string | null) {
   return `${anos > 0 ? `${anos} ano(s)` : ''} ${meses > 0 ? `e ${meses} mês(es)` : ''}`.trim();
 }
 
-export default async function PerfilServidorPage({ params }: { params: { id: string } }) {
-  const servidorId = params.id;
+export default async function PerfilServidorPage({ 
+  params, 
+  searchParams 
+}: { 
+  params: Promise<{ id: string }>, 
+  searchParams: Promise<{ editarDependente?: string, editarEndereco?: string, editarBanco?: string, editarDesligamento?: string }> 
+}) {
+  // 1. AWAIT OBRIGATÓRIO EM NEXT.JS 15/16 PARA PARÂMETROS
+  const resolvedParams = await params;
+  const servidorId = resolvedParams.id;
+
+  const resolvedSearchParams = await searchParams;
+  const editarDependenteId = resolvedSearchParams?.editarDependente;
+  const editarEndereco = resolvedSearchParams?.editarEndereco === "true";
+  const editarBanco = resolvedSearchParams?.editarBanco === "true";
+  const editarDesligamento = resolvedSearchParams?.editarDesligamento === "true";
 
   // Buscando todos os dados relacionados ao servidor
   const [servidorBase] = await db.select().from(servidores).where(eq(servidores.id, servidorId));
@@ -37,7 +52,6 @@ export default async function PerfilServidorPage({ params }: { params: { id: str
   const [endereco] = await db.select().from(enderecos).where(eq(enderecos.servidorId, servidorId));
   const [banco] = await db.select().from(dadosBancarios).where(eq(dadosBancarios.servidorId, servidorId));
   
-  const listaEmergencia = await db.select().from(contatosEmergencia).where(eq(contatosEmergencia.servidorId, servidorId));
   const listaDependentes = await db.select().from(dependentesPensionistas).where(eq(dependentesPensionistas.servidorId, servidorId));
 
   if (!servidorBase || !pessoal) {
@@ -45,6 +59,8 @@ export default async function PerfilServidorPage({ params }: { params: { id: str
   }
 
   const tempoCasa = calcularTempoDeCasa(servidorBase.dataAdmissao, servidorBase.dataDesligamento);
+
+  const dependenteEditando = editarDependenteId ? listaDependentes.find(d => d.id === editarDependenteId) : null;
 
   return (
     <div className="max-w-7xl mx-auto pb-12 space-y-8">
@@ -83,41 +99,80 @@ export default async function PerfilServidorPage({ params }: { params: { id: str
           
           {/* DEPENDENTES E PENSIONISTAS */}
           <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-2 border-b pb-4 mb-4">
-              <Users className="text-purple-600" />
-              <h2 className="text-xl font-semibold text-gray-800">Dependentes e Pensionistas</h2>
+            <div className="flex items-center justify-between border-b pb-4 mb-4">
+              <div className="flex items-center gap-2">
+                <Users className="text-purple-600" />
+                <h2 className="text-xl font-semibold text-gray-800">Dependentes e Pensionistas</h2>
+              </div>
+              {dependenteEditando && (
+                <Link href={`/servidores/${servidorId}`} scroll={false} className="text-gray-400 hover:text-red-500">
+                  <X size={20} />
+                </Link>
+              )}
             </div>
             
-            <form action={salvarDependente} className="mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200 grid grid-cols-2 gap-3">
+            <form action={dependenteEditando ? atualizarDependente : salvarDependente} className={`mb-6 p-4 rounded-lg border grid grid-cols-2 gap-3 transition-colors ${dependenteEditando ? 'bg-amber-50 border-amber-300' : 'bg-slate-50 border-slate-200'}`}>
               <input type="hidden" name="servidorId" value={servidorId} />
-              <div className="col-span-2"><input type="text" name="nome" required placeholder="Nome Completo *" className="w-full border p-2 text-sm rounded-md outline-none focus:ring-2 focus:ring-purple-500" /></div>
+              {dependenteEditando && <input type="hidden" name="id" value={dependenteEditando.id} />}
+              
+              <div className="col-span-2">
+                <input type="text" name="nome" defaultValue={dependenteEditando?.nome || ""} required placeholder="Nome Completo *" className="w-full border p-2 text-sm rounded-md outline-none focus:ring-2 focus:ring-purple-500 bg-white" />
+              </div>
               <div>
-                <select name="tipo" required className="w-full border p-2 text-sm rounded-md bg-white outline-none focus:ring-2 focus:ring-purple-500">
+                <select name="tipo" defaultValue={dependenteEditando?.tipo || "DEPENDENTE"} required className="w-full border p-2 text-sm rounded-md bg-white outline-none focus:ring-2 focus:ring-purple-500">
                   <option value="DEPENDENTE">Dependente</option>
                   <option value="PENSIONISTA">Pensionista</option>
                 </select>
               </div>
-              <div><input type="text" name="parentesco" required placeholder="Parentesco *" className="w-full border p-2 text-sm rounded-md outline-none focus:ring-2 focus:ring-purple-500" /></div>
-              <div className="col-span-2"><input type="text" name="documentoReferencia" placeholder="Documento (CPF/RG) - Opcional" className="w-full border p-2 text-sm rounded-md outline-none focus:ring-2 focus:ring-purple-500" /></div>
-              <div className="col-span-2"><button type="submit" className="w-full bg-purple-600 text-white p-2 rounded-md text-sm font-bold hover:bg-purple-700">Adicionar Registro</button></div>
+              <div>
+                <input type="text" name="parentesco" defaultValue={dependenteEditando?.parentesco || ""} required placeholder="Parentesco *" className="w-full border p-2 text-sm rounded-md outline-none focus:ring-2 focus:ring-purple-500 bg-white" />
+              </div>
+              <div className="col-span-2">
+                <input type="text" name="documentoReferencia" defaultValue={dependenteEditando?.documentoReferencia || ""} placeholder="Documento (CPF/RG) - Opcional" className="w-full border p-2 text-sm rounded-md outline-none focus:ring-2 focus:ring-purple-500 bg-white" />
+              </div>
+              <div className="col-span-2">
+                <button type="submit" className={`w-full text-white p-2 rounded-md text-sm font-bold transition-colors ${dependenteEditando ? 'bg-amber-600 hover:bg-amber-700' : 'bg-purple-600 hover:bg-purple-700'}`}>
+                  {dependenteEditando ? "Salvar Alterações" : "Adicionar Registro"}
+                </button>
+              </div>
             </form>
 
             {listaDependentes.map((d) => (
-              <div key={d.id} className="p-3 bg-white border border-gray-100 rounded-lg shadow-sm border-l-4 border-l-purple-500 mb-2">
-                <p className="text-sm font-bold text-gray-800">{d.nome}</p>
-                <p className="text-xs text-gray-600 mt-1">{d.tipo} | Parentesco: {d.parentesco}</p>
-                {d.documentoReferencia && <p className="text-xs text-gray-500 mt-1">Doc: {d.documentoReferencia}</p>}
+              <div key={d.id} className={`p-3 bg-white border rounded-lg shadow-sm border-l-4 mb-2 flex justify-between items-center group transition-colors ${dependenteEditando?.id === d.id ? 'border-amber-400 bg-amber-50/50' : 'border-gray-100 border-l-purple-500 hover:bg-slate-50'}`}>
+                <div>
+                  <p className="text-sm font-bold text-gray-800">{d.nome}</p>
+                  <p className="text-xs text-gray-600 mt-1">{d.tipo} | Parentesco: {d.parentesco}</p>
+                  {d.documentoReferencia && <p className="text-xs text-gray-500 mt-1">Doc: {d.documentoReferencia}</p>}
+                </div>
+                <div className="flex gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
+                  <Link href={`/servidores/${servidorId}?editarDependente=${d.id}`} scroll={false} className="p-1.5 text-amber-600 hover:bg-amber-100 rounded-md">
+                    <Pencil size={14} />
+                  </Link>
+                  <BotaoExcluir id={d.id} nomeRegistro={d.nome} acaoExcluir={excluirDependente as any} />
+                </div>
               </div>
             ))}
           </section>
 
-          {/* ENDEREÇO (Mantido do anterior) */}
-          <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-             <div className="flex items-center gap-2 border-b pb-4 mb-4">
-              <MapPin className="text-blue-600" />
-              <h2 className="text-xl font-semibold text-gray-800">Endereço Residencial</h2>
+          {/* ENDEREÇO RESIDENCIAL */}
+          <section className={`p-6 rounded-xl border shadow-sm transition-colors ${editarEndereco ? 'bg-amber-50 border-amber-300' : 'bg-white border-gray-200'}`}>
+             <div className="flex items-center justify-between border-b pb-4 mb-4">
+              <div className="flex items-center gap-2">
+                <MapPin className="text-blue-600" />
+                <h2 className="text-xl font-semibold text-gray-800">Endereço Residencial</h2>
+              </div>
+              {endereco && !editarEndereco && (
+                <div className="flex gap-2">
+                  <Link href={`/servidores/${servidorId}?editarEndereco=true`} scroll={false} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"><Pencil size={16} /></Link>
+                  <BotaoExcluir id={endereco.id} nomeRegistro="Endereço" acaoExcluir={excluirEndereco as any} />
+                </div>
+              )}
+              {editarEndereco && (
+                <Link href={`/servidores/${servidorId}`} scroll={false} className="text-gray-400 hover:text-red-500"><X size={20} /></Link>
+              )}
             </div>
-            {endereco ? (
+
+            {endereco && !editarEndereco ? (
               <div className="text-sm text-gray-700 space-y-2">
                 <p><span className="font-semibold">Logradouro:</span> {endereco.logradouro}, {endereco.numero}</p>
                 <p><span className="font-semibold">Bairro:</span> {endereco.bairro}</p>
@@ -125,18 +180,22 @@ export default async function PerfilServidorPage({ params }: { params: { id: str
                 <p><span className="font-semibold">CEP:</span> {endereco.cep}</p>
               </div>
             ) : (
-              <form action={salvarEndereco} className="space-y-3">
+              <form action={endereco ? atualizarEndereco : salvarEndereco} className="space-y-3">
                 <input type="hidden" name="servidorId" value={servidorId} />
+                {endereco && <input type="hidden" name="id" value={endereco.id} />}
+                
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="col-span-2"><input type="text" name="logradouro" placeholder="Rua/Avenida" required className="w-full border p-2 text-sm rounded-md outline-none" /></div>
-                  <div><input type="text" name="numero" placeholder="Nº" required className="w-full border p-2 text-sm rounded-md outline-none" /></div>
+                  <div className="col-span-2"><input type="text" name="logradouro" defaultValue={endereco?.logradouro || ""} placeholder="Rua/Avenida" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
+                  <div><input type="text" name="numero" defaultValue={endereco?.numero || ""} placeholder="Nº" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><input type="text" name="bairro" placeholder="Bairro" required className="w-full border p-2 text-sm rounded-md outline-none" /></div>
-                  <div><input type="text" name="cep" placeholder="CEP" required className="w-full border p-2 text-sm rounded-md outline-none" /></div>
+                  <div><input type="text" name="bairro" defaultValue={endereco?.bairro || ""} placeholder="Bairro" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
+                  <div><input type="text" name="cep" defaultValue={endereco?.cep || ""} placeholder="CEP" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
                 </div>
-                <div><input type="text" name="cidade" placeholder="Cidade" required className="w-full border p-2 text-sm rounded-md outline-none" /></div>
-                <button type="submit" className="w-full bg-slate-900 text-white p-2 rounded-md text-sm font-bold hover:bg-slate-800">Salvar Endereço</button>
+                <div><input type="text" name="cidade" defaultValue={endereco?.cidade || ""} placeholder="Cidade" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
+                <button type="submit" className={`w-full text-white p-2 rounded-md text-sm font-bold transition-colors ${endereco ? 'bg-amber-600 hover:bg-amber-700' : 'bg-slate-900 hover:bg-slate-800'}`}>
+                  {endereco ? "Salvar Alterações" : "Salvar Endereço"}
+                </button>
               </form>
             )}
           </section>
@@ -147,65 +206,95 @@ export default async function PerfilServidorPage({ params }: { params: { id: str
         <div className="space-y-8">
           
           {/* DESLIGAMENTO INSTITUCIONAL */}
-          <section className="bg-white p-6 rounded-xl border border-red-200 shadow-sm bg-red-50/30">
-            <div className="flex items-center gap-2 border-b border-red-100 pb-4 mb-4">
-              <FileWarning className="text-red-600" />
-              <h2 className="text-xl font-semibold text-gray-800">Desligamento Institucional</h2>
+          <section className={`p-6 rounded-xl border shadow-sm transition-colors ${editarDesligamento ? 'bg-amber-50 border-amber-300' : 'bg-white border-red-200'}`}>
+            <div className="flex items-center justify-between border-b border-red-100 pb-4 mb-4">
+              <div className="flex items-center gap-2">
+                <FileWarning className="text-red-600" />
+                <h2 className="text-xl font-semibold text-gray-800">Desligamento Institucional</h2>
+              </div>
+              
+              {servidorBase.status === 'DESLIGADO' && !editarDesligamento && (
+                <div className="flex gap-2">
+                  <Link href={`/servidores/${servidorId}?editarDesligamento=true`} scroll={false} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"><Pencil size={16} /></Link>
+                  <BotaoExcluir id={servidorId} nomeRegistro="Desligamento (Reativar Servidor)" acaoExcluir={excluirDesligamento as any} />
+                </div>
+              )}
+              {editarDesligamento && (
+                <Link href={`/servidores/${servidorId}`} scroll={false} className="text-gray-400 hover:text-red-500"><X size={20} /></Link>
+              )}
             </div>
             
-            {servidorBase.status === 'DESLIGADO' ? (
-              <div className="text-sm text-red-800 space-y-2 p-3 bg-red-100 rounded-lg">
+            {servidorBase.status === 'DESLIGADO' && !editarDesligamento ? (
+              <div className="text-sm text-red-800 space-y-2 p-3 bg-red-100/50 rounded-lg border border-red-100">
                 <p><span className="font-bold">Data do Desligamento:</span> {servidorBase.dataDesligamento}</p>
                 <p><span className="font-bold">Motivo:</span> {servidorBase.motivoDesligamento}</p>
                 {servidorBase.numeroProcessoDesligamento && <p><span className="font-bold">Nº Processo:</span> {servidorBase.numeroProcessoDesligamento}</p>}
               </div>
             ) : (
-              <form action={registrarDesligamento} className="space-y-3">
+              <form action={editarDesligamento ? atualizarDesligamento : registrarDesligamento} className="space-y-3">
                 <input type="hidden" name="servidorId" value={servidorId} />
+                
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">Data do Desligamento *</label>
-                  <input type="date" name="dataDesligamento" required className="w-full border p-2 text-sm rounded-md outline-none focus:ring-2 focus:ring-red-500" />
+                  <input type="date" name="dataDesligamento" defaultValue={servidorBase?.dataDesligamento || ""} required className="w-full border p-2 text-sm rounded-md outline-none bg-white focus:ring-2 focus:ring-red-500" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">Motivo *</label>
-                  <textarea name="motivoDesligamento" required rows={2} placeholder="Ex: Fim do contrato, pedido de demissão, etc." className="w-full border p-2 text-sm rounded-md outline-none focus:ring-2 focus:ring-red-500"></textarea>
+                  <textarea name="motivoDesligamento" defaultValue={servidorBase?.motivoDesligamento || ""} required rows={2} placeholder="Ex: Fim do contrato, pedido de demissão, etc." className="w-full border p-2 text-sm rounded-md outline-none bg-white focus:ring-2 focus:ring-red-500"></textarea>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">Número do Processo (Opcional)</label>
-                  <input type="text" name="numeroProcessoDesligamento" placeholder="Ex: 2026/00123" className="w-full border p-2 text-sm rounded-md outline-none focus:ring-2 focus:ring-red-500" />
+                  <input type="text" name="numeroProcessoDesligamento" defaultValue={servidorBase?.numeroProcessoDesligamento || ""} placeholder="Ex: 2026/00123" className="w-full border p-2 text-sm rounded-md outline-none bg-white focus:ring-2 focus:ring-red-500" />
                 </div>
-                <button type="submit" className="w-full bg-red-600 text-white p-2 rounded-md text-sm font-bold hover:bg-red-700 flex justify-center items-center gap-2">
-                  <ShieldAlert size={16} /> Confirmar Desligamento
+                <button type="submit" className={`w-full text-white p-2 rounded-md text-sm font-bold flex justify-center items-center gap-2 transition-colors ${editarDesligamento ? 'bg-amber-600 hover:bg-amber-700' : 'bg-red-600 hover:bg-red-700'}`}>
+                  {editarDesligamento ? "Salvar Correção" : <><ShieldAlert size={16} /> Confirmar Desligamento</>}
                 </button>
               </form>
             )}
           </section>
 
-          {/* DADOS BANCÁRIOS (Mantido do anterior) */}
-          <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-2 border-b pb-4 mb-4">
-              <Landmark className="text-blue-600" />
-              <h2 className="text-xl font-semibold text-gray-800">Dados Bancários</h2>
+          {/* DADOS BANCÁRIOS */}
+          <section className={`p-6 rounded-xl border shadow-sm transition-colors ${editarBanco ? 'bg-amber-50 border-amber-300' : 'bg-white border-gray-200'}`}>
+            <div className="flex items-center justify-between border-b pb-4 mb-4">
+              <div className="flex items-center gap-2">
+                <Landmark className="text-blue-600" />
+                <h2 className="text-xl font-semibold text-gray-800">Dados Bancários</h2>
+              </div>
+              {banco && !editarBanco && (
+                <div className="flex gap-2">
+                  <Link href={`/servidores/${servidorId}?editarBanco=true`} scroll={false} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"><Pencil size={16} /></Link>
+                  <BotaoExcluir id={banco.id} nomeRegistro="Conta Bancária" acaoExcluir={excluirContaBancaria as any} />
+                </div>
+              )}
+              {editarBanco && (
+                <Link href={`/servidores/${servidorId}`} scroll={false} className="text-gray-400 hover:text-red-500"><X size={20} /></Link>
+              )}
             </div>
-            {banco ? (
+            
+            {banco && !editarBanco ? (
                <div className="text-sm text-gray-700 space-y-2">
                 <p><span className="font-semibold">Titular:</span> {banco.nomeTitular}</p>
                 <p><span className="font-semibold">Banco:</span> {banco.banco}</p>
                 <p><span className="font-semibold">Agência/Conta:</span> {banco.agencia} / {banco.conta}</p>
               </div>
             ) : (
-              <form action={salvarContaBancaria} className="space-y-3">
+              <form action={banco ? atualizarContaBancaria : salvarContaBancaria} className="space-y-3">
                 <input type="hidden" name="servidorId" value={servidorId} />
-                <div><input type="text" name="nomeTitular" placeholder="Nome Completo do Titular" required className="w-full border p-2 text-sm rounded-md outline-none" /></div>
+                {banco && <input type="hidden" name="id" value={banco.id} />}
+                
+                <div><input type="text" name="nomeTitular" defaultValue={banco?.nomeTitular || ""} placeholder="Nome Completo do Titular" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="col-span-1"><input type="text" name="banco" placeholder="Banco" required className="w-full border p-2 text-sm rounded-md outline-none" /></div>
-                  <div className="col-span-1"><input type="text" name="agencia" placeholder="Agência" required className="w-full border p-2 text-sm rounded-md outline-none" /></div>
-                  <div className="col-span-1"><input type="text" name="conta" placeholder="Conta" required className="w-full border p-2 text-sm rounded-md outline-none" /></div>
+                  <div className="col-span-1"><input type="text" name="banco" defaultValue={banco?.banco || ""} placeholder="Banco" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
+                  <div className="col-span-1"><input type="text" name="agencia" defaultValue={banco?.agencia || ""} placeholder="Agência" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
+                  <div className="col-span-1"><input type="text" name="conta" defaultValue={banco?.conta || ""} placeholder="Conta" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
                 </div>
-                <button type="submit" className="w-full bg-slate-900 text-white p-2 rounded-md text-sm font-bold hover:bg-slate-800">Salvar Dados Bancários</button>
+                <button type="submit" className={`w-full text-white p-2 rounded-md text-sm font-bold transition-colors ${banco ? 'bg-amber-600 hover:bg-amber-700' : 'bg-slate-900 hover:bg-slate-800'}`}>
+                  {banco ? "Salvar Alterações" : "Salvar Dados Bancários"}
+                </button>
               </form>
             )}
           </section>
+
         </div>
       </div>
     </div>

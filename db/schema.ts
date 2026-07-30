@@ -16,9 +16,10 @@ export const lotacoes = sqliteTable('lotacoes', {
   criadoEm: text('criado_em').default(sql`CURRENT_TIMESTAMP`),
 });
 
-// 2. Servidores
+// Arquivo: db/schema.ts (Exemplo da tabela servidores)
 export const servidores = sqliteTable('servidores', {
   id: text('id').primaryKey(),
+  matricula: text('matricula'),
   vinculo: text('vinculo', { enum: ['EFETIVO', 'CONTRATADO', 'COMISSIONADO', 'ESTAGIARIO'] }).notNull(),
   dataAdmissao: text('data_admissao').notNull(),
   dataDesligamento: text('data_desligamento'), 
@@ -40,14 +41,14 @@ export const dadosPessoais = sqliteTable('dados_pessoais', {
   estadoCivil: text('estado_civil').notNull(),
   genero: text('genero').notNull(),
   orientacaoSexual: text('orientacao_sexual').notNull(),
-  email: text('email').notNull().unique(),
+  email: text('email').unique(),
   telefone: text('telefone').notNull(),
 });
 
 // 4. Documentos
 export const documentos = sqliteTable('documentos', {
   servidorId: text('servidor_id').primaryKey().references(() => servidores.id, { onDelete: 'cascade' }),
-  cpf: text('cpf').notNull().unique(),
+  cpf: text('cpf').unique(),
   rg: text('rg').notNull().unique(),
   tituloEleitoral: text('titulo_eleitoral').notNull().unique(),
   pisPasep: text('pis_pasep'),
@@ -133,8 +134,8 @@ export const eventosAusencia = sqliteTable('eventos_ausencia', {
 export const candidatos = sqliteTable('candidatos', {
   id: text('id').primaryKey(),
   nome: text('nome').notNull(),
-  cpf: text('cpf').notNull().unique(), 
-  email: text('email').notNull().unique(),
+  cpf: text('cpf').notNull().unique(),
+  email: text('email'),
   telefone: text('telefone').notNull(),
   qualificacaoCurriculo: text('qualificacao_curriculo'),
   areaAdaptacaoSugerida: text('area_adaptacao_sugerida'),

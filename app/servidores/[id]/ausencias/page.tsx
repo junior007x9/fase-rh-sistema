@@ -3,13 +3,26 @@ import { db } from "../../../../db/index";
 import { servidores, dadosPessoais, periodosAquisitivos, eventosAusencia } from "../../../../db/schema";
 import { eq, desc } from "drizzle-orm";
 import Link from "next/link";
-import { ArrowLeft, CalendarRange, Clock, ShieldAlert } from "lucide-react";
-// CAMINHO CORRIGIDO ABAIXO (Apenas 3 níveis de retorno)
-import { salvarPeriodoAquisitivo, salvarEventoAusencia } from "../../../actions/ausencias";
+import { ArrowLeft, CalendarRange, Clock, Pencil, X } from "lucide-react";
+import BotaoExcluir from "../../../components/BotaoExcluir";
+import { 
+  salvarPeriodoAquisitivo, 
+  atualizarPeriodoAquisitivo, 
+  excluirPeriodoAquisitivo, 
+  salvarEventoAusencia, 
+  atualizarAusencia, 
+  excluirAusencia 
+} from "../../../actions/ausencias";
 
 export const dynamic = "force-dynamic";
 
-export default async function AusenciasPage({ params }: { params: { id: string } }) {
+export default async function AusenciasPage({ 
+  params, 
+  searchParams 
+}: { 
+  params: { id: string }, 
+  searchParams: { editarPeriodo?: string, editarAusencia?: string } 
+}) {
   const servidorId = params.id;
 
   // Buscando dados do servidor
@@ -26,6 +39,10 @@ export default async function AusenciasPage({ params }: { params: { id: string }
     .orderBy(desc(eventosAusencia.criadoEm));
 
   if (!pessoal) return <div className="p-8 text-center text-red-500 font-bold">Servidor não encontrado.</div>;
+
+  // Estados de edição via URL
+  const periodoEditando = searchParams.editarPeriodo ? periodos.find(p => p.id === searchParams.editarPeriodo) : null;
+  const ausenciaEditando = searchParams.editarAusencia ? ausencias.find(a => a.id === searchParams.editarAusencia) : null;
 
   return (
     <div className="max-w-6xl mx-auto pb-12 space-y-8">
@@ -45,26 +62,42 @@ export default async function AusenciasPage({ params }: { params: { id: string }
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
         {/* 1. PERÍODOS AQUISITIVOS DE FÉRIAS */}
-        <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm h-fit">
-          <div className="flex items-center gap-2 border-b pb-4 mb-4">
-            <CalendarRange className="text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-800">Períodos Aquisitivos (Férias)</h2>
+        <section className={`p-6 rounded-xl border shadow-sm h-fit transition-colors ${periodoEditando ? 'bg-amber-50 border-amber-300' : 'bg-white border-gray-200'}`}>
+          <div className="flex items-center justify-between border-b pb-4 mb-4">
+            <div className="flex items-center gap-2">
+              <CalendarRange className="text-blue-600" />
+              <h2 className={`text-xl font-semibold ${periodoEditando ? 'text-amber-800' : 'text-gray-800'}`}>
+                {periodoEditando ? "Editando Período Aquisitivo" : "Períodos Aquisitivos (Férias)"}
+              </h2>
+            </div>
+            {periodoEditando && (
+              <Link href={`/servidores/${servidorId}/ausencias`} scroll={false} className="text-gray-400 hover:text-red-500">
+                <X size={20} />
+              </Link>
+            )}
           </div>
 
-          <form action={salvarPeriodoAquisitivo} className="mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
-            <h3 className="text-sm font-bold text-slate-700 mb-3">Registrar Novo Período</h3>
+          <form action={periodoEditando ? atualizarPeriodoAquisitivo : salvarPeriodoAquisitivo} className={`mb-6 p-4 rounded-lg border transition-colors ${periodoEditando ? 'bg-amber-100/50 border-amber-200' : 'bg-slate-50 border-slate-200'}`}>
+            <h3 className={`text-sm font-bold mb-3 ${periodoEditando ? 'text-amber-900' : 'text-slate-700'}`}>
+              {periodoEditando ? "Alterar Período" : "Registrar Novo Período"}
+            </h3>
+            
             <input type="hidden" name="servidorId" value={servidorId} />
+            {periodoEditando && <input type="hidden" name="id" value={periodoEditando.id} />}
+
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Data Início</label>
-                <input type="date" name="dataInicio" required className="border p-2 rounded-md w-full text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                <input type="date" name="dataInicio" defaultValue={periodoEditando?.dataInicio || ""} required className="border p-2 rounded-md w-full text-sm outline-none bg-white focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Data Fim</label>
-                <input type="date" name="dataFim" required className="border p-2 rounded-md w-full text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                <input type="date" name="dataFim" defaultValue={periodoEditando?.dataFim || ""} required className="border p-2 rounded-md w-full text-sm outline-none bg-white focus:ring-2 focus:ring-blue-500" />
               </div>
             </div>
-            <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded-md text-sm font-bold hover:bg-blue-700">Adicionar Período Aquisitivo</button>
+            <button type="submit" className={`w-full text-white p-2 rounded-md text-sm font-bold transition-colors ${periodoEditando ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
+              {periodoEditando ? "Salvar Alterações" : "Adicionar Período Aquisitivo"}
+            </button>
           </form>
 
           <div className="space-y-3">
@@ -72,16 +105,24 @@ export default async function AusenciasPage({ params }: { params: { id: string }
               <p className="text-sm text-gray-500 text-center py-4">Nenhum período aquisitivo registrado.</p>
             ) : (
               periodos.map((p) => (
-                <div key={p.id} className="flex justify-between items-center p-3 bg-white border border-gray-100 rounded-lg shadow-sm">
+                <div key={p.id} className={`flex justify-between items-center p-3 bg-white border rounded-lg shadow-sm group transition-colors ${periodoEditando?.id === p.id ? 'border-amber-400 bg-amber-50/50' : 'border-gray-100 hover:bg-slate-50'}`}>
                   <div>
                     <p className="text-sm font-bold text-gray-800">{p.dataInicio} a {p.dataFim}</p>
                     <p className="text-xs text-gray-500">Dias restantes: {p.diasRestantes}</p>
                   </div>
-                  <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-full ${
-                    p.status === 'PENDENTE' ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'
-                  }`}>
-                    {p.status}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-full ${
+                      p.status === 'PENDENTE' ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'
+                    }`}>
+                      {p.status}
+                    </span>
+                    <div className="flex gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
+                      <Link href={`/servidores/${servidorId}/ausencias?editarPeriodo=${p.id}`} scroll={false} className="p-1.5 text-amber-600 hover:bg-amber-100 rounded-md">
+                        <Pencil size={14} />
+                      </Link>
+                      <BotaoExcluir id={p.id} nomeRegistro={`Período ${p.dataInicio} a ${p.dataFim}`} acaoExcluir={excluirPeriodoAquisitivo as any} />
+                    </div>
+                  </div>
                 </div>
               ))
             )}
@@ -89,19 +130,32 @@ export default async function AusenciasPage({ params }: { params: { id: string }
         </section>
 
         {/* 2. REGISTRO DE EVENTOS DE AUSÊNCIA */}
-        <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <div className="flex items-center gap-2 border-b pb-4 mb-4">
-            <Clock className="text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-800">Histórico de Ausências</h2>
+        <section className={`p-6 rounded-xl border shadow-sm transition-colors ${ausenciaEditando ? 'bg-amber-50 border-amber-300' : 'bg-white border-gray-200'}`}>
+          <div className="flex items-center justify-between border-b pb-4 mb-4">
+            <div className="flex items-center gap-2">
+              <Clock className="text-blue-600" />
+              <h2 className={`text-xl font-semibold ${ausenciaEditando ? 'text-amber-800' : 'text-gray-800'}`}>
+                {ausenciaEditando ? "Editando Ausência" : "Histórico de Ausências"}
+              </h2>
+            </div>
+            {ausenciaEditando && (
+              <Link href={`/servidores/${servidorId}/ausencias`} scroll={false} className="text-gray-400 hover:text-red-500">
+                <X size={20} />
+              </Link>
+            )}
           </div>
 
-          <form action={salvarEventoAusencia} className="mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
-             <h3 className="text-sm font-bold text-slate-700 mb-3">Registrar Nova Ausência</h3>
+          <form action={ausenciaEditando ? atualizarAusencia : salvarEventoAusencia} className={`mb-6 p-4 rounded-lg border transition-colors ${ausenciaEditando ? 'bg-amber-100/50 border-amber-200' : 'bg-slate-50 border-slate-200'}`}>
+             <h3 className={`text-sm font-bold mb-3 ${ausenciaEditando ? 'text-amber-900' : 'text-slate-700'}`}>
+               {ausenciaEditando ? "Alterar Ausência" : "Registrar Nova Ausência"}
+             </h3>
+            
             <input type="hidden" name="servidorId" value={servidorId} />
+            {ausenciaEditando && <input type="hidden" name="id" value={ausenciaEditando.id} />}
             
             <div className="mb-3">
               <label className="block text-xs font-medium text-gray-600 mb-1">Tipo de Ausência</label>
-              <select name="tipoAusencia" required className="border p-2 rounded-md w-full text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500">
+              <select name="tipoAusencia" defaultValue={ausenciaEditando?.tipoAusencia || "FERIAS"} required className="border p-2 rounded-md w-full text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="FERIAS">Férias</option>
                 <option value="LICENCA_MATERNIDADE">Licença Maternidade</option>
                 <option value="SAUDE">Saúde / Atestado</option>
@@ -113,17 +167,17 @@ export default async function AusenciasPage({ params }: { params: { id: string }
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Início da Ausência</label>
-                <input type="date" name="dataInicio" required className="border p-2 rounded-md w-full text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                <input type="date" name="dataInicio" defaultValue={ausenciaEditando?.dataInicio || ""} required className="border p-2 rounded-md w-full text-sm outline-none bg-white focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Fim da Ausência</label>
-                <input type="date" name="dataFim" required className="border p-2 rounded-md w-full text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                <input type="date" name="dataFim" defaultValue={ausenciaEditando?.dataFim || ""} required className="border p-2 rounded-md w-full text-sm outline-none bg-white focus:ring-2 focus:ring-blue-500" />
               </div>
             </div>
 
             <div className="mb-3">
               <label className="block text-xs font-medium text-gray-600 mb-1">Vincular a Período Aquisitivo (Se Férias)</label>
-              <select name="periodoAquisitivoId" className="border p-2 rounded-md w-full text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500">
+              <select name="periodoAquisitivoId" defaultValue={ausenciaEditando?.periodoAquisitivoId || ""} className="border p-2 rounded-md w-full text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">Não vincular</option>
                 {periodos.filter(p => p.status === 'PENDENTE').map(p => (
                   <option key={p.id} value={p.id}>{p.dataInicio} a {p.dataFim}</option>
@@ -133,10 +187,12 @@ export default async function AusenciasPage({ params }: { params: { id: string }
 
             <div className="mb-3">
               <label className="block text-xs font-medium text-gray-600 mb-1">Observação / Motivo</label>
-              <input type="text" name="observacao" className="border p-2 rounded-md w-full text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="Opcional" />
+              <input type="text" name="observacao" defaultValue={ausenciaEditando?.observacao || ""} className="border p-2 rounded-md w-full text-sm outline-none bg-white focus:ring-2 focus:ring-blue-500" placeholder="Opcional" />
             </div>
 
-            <button type="submit" className="w-full bg-slate-900 text-white p-2 rounded-md text-sm font-bold hover:bg-slate-800">Registrar Ausência</button>
+            <button type="submit" className={`w-full text-white p-2 rounded-md text-sm font-bold transition-colors ${ausenciaEditando ? 'bg-amber-600 hover:bg-amber-700' : 'bg-slate-900 hover:bg-slate-800'}`}>
+              {ausenciaEditando ? "Salvar Alterações" : "Registrar Ausência"}
+            </button>
           </form>
 
           <div className="space-y-3">
@@ -144,10 +200,18 @@ export default async function AusenciasPage({ params }: { params: { id: string }
               <p className="text-sm text-gray-500 text-center py-4">Nenhuma ausência registrada.</p>
             ) : (
               ausencias.map((a) => (
-                <div key={a.id} className="p-3 bg-white border border-gray-100 rounded-lg shadow-sm border-l-4 border-l-blue-500">
-                  <p className="text-sm font-bold text-gray-800">{a.tipoAusencia.replace(/_/g, ' ')}</p>
-                  <p className="text-xs text-gray-600 mt-1">Período: {a.dataInicio} até {a.dataFim}</p>
-                  {a.observacao && <p className="text-xs text-gray-500 mt-1 italic">Obs: {a.observacao}</p>}
+                <div key={a.id} className={`p-3 bg-white border rounded-lg shadow-sm border-l-4 flex justify-between items-center group transition-colors ${ausenciaEditando?.id === a.id ? 'border-amber-400 bg-amber-50/50' : 'border-gray-100 border-l-blue-500 hover:bg-slate-50'}`}>
+                  <div>
+                    <p className="text-sm font-bold text-gray-800">{a.tipoAusencia.replace(/_/g, ' ')}</p>
+                    <p className="text-xs text-gray-600 mt-1">Período: {a.dataInicio} até {a.dataFim}</p>
+                    {a.observacao && <p className="text-xs text-gray-500 mt-1 italic">Obs: {a.observacao}</p>}
+                  </div>
+                  <div className="flex gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
+                    <Link href={`/servidores/${servidorId}/ausencias?editarAusencia=${a.id}`} scroll={false} className="p-1.5 text-amber-600 hover:bg-amber-100 rounded-md">
+                      <Pencil size={14} />
+                    </Link>
+                    <BotaoExcluir id={a.id} nomeRegistro={a.tipoAusencia} acaoExcluir={excluirAusencia as any} />
+                  </div>
                 </div>
               ))
             )}

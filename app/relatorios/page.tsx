@@ -1,52 +1,40 @@
 // Arquivo: app/relatorios/page.tsx
 import { db } from "../../db/index";
 import { servidores, dadosPessoais, documentos } from "../../db/schema";
-import ExportadorRelatorios from "../components/ExportadorRelatorios";
-import { BarChart3 } from "lucide-react";
+import { eq } from "drizzle-orm";
+import GeradorRelatorios from "./GeradorRelatorios";
+
+export const dynamic = "force-dynamic";
 
 export default async function RelatoriosPage() {
-  // 1. Busca os dados separados de cada tabela
-  const listaServidores = await db.select().from(servidores);
-  const listaDadosPessoais = await db.select().from(dadosPessoais);
-  const listaDocumentos = await db.select().from(documentos);
-
-  // 2. Mescla os dados das três tabelas usando o ID do servidor
-  const dadosCompletos = listaServidores.map((servidor) => {
-    // Procura o nome na tabela de Dados Pessoais
-    const dados = listaDadosPessoais.find((d) => d.servidorId === servidor.id);
-    
-    // Procura o CPF na tabela de Documentos
-    const docs = listaDocumentos.find((d) => d.servidorId === servidor.id);
-
-    return {
-      id: servidor.id,
-      nome: dados?.nome || "Nome não cadastrado",
-      cpf: docs?.cpf || "---", // Agora pega do lugar certo!
-      vinculo: servidor.vinculo,
-      status: servidor.status,
-      dataAdmissao: servidor.dataAdmissao,
-    };
-  });
+  // Buscamos TUDO de uma vez para que o Client Component possa filtrar na velocidade da luz
+  const baseDados = await db.select({
+    id: servidores.id,
+    matricula: servidores.matricula,
+    nome: dadosPessoais.nome,
+    cpf: documentos.cpf,
+    dataNascimento: dadosPessoais.dataNascimento,
+    telefone: dadosPessoais.telefone,
+    email: dadosPessoais.email,
+    cargo: servidores.cargo,
+    lotacao: servidores.lotacao,
+    vinculo: servidores.vinculo,
+    status: servidores.status,
+    dataAdmissao: servidores.dataAdmissao
+  })
+  .from(servidores)
+  .leftJoin(dadosPessoais, eq(servidores.id, dadosPessoais.servidorId))
+  .leftJoin(documentos, eq(servidores.id, documentos.servidorId));
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      
-      {/* CABEÇALHO DA PÁGINA */}
-      <div className="bg-gradient-to-r from-slate-900 to-blue-900 p-8 rounded-3xl shadow-xl text-white">
-        <div className="flex items-center gap-4 mb-2">
-          <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
-            <BarChart3 size={28} className="text-white" />
-          </div>
-          <h1 className="text-3xl font-extrabold tracking-tight">Central de Relatórios</h1>
-        </div>
-        <p className="text-blue-100 mt-2 text-lg max-w-2xl">
-          Exporte os dados dos servidores da Fundação de Atendimento Socioeducativo de forma profissional, segura e formatada com as cores do Estado do Maranhão.
-        </p>
-      </div>
+    <div className="max-w-7xl mx-auto pb-12 space-y-6">
+      <header className="border-b border-gray-200 pb-6">
+        <h1 className="text-3xl font-bold text-gray-900">Relatórios Gerenciais</h1>
+        <p className="text-gray-500 mt-1">Gere planilhas personalizadas baseadas nos dados dos servidores.</p>
+      </header>
 
-      {/* COMPONENTE CLIENTE COM OS BOTÕES DE EXPORTAÇÃO */}
-      <ExportadorRelatorios dados={dadosCompletos} />
-
+      {/* Chamamos o componente cliente passando toda a base de dados */}
+      <GeradorRelatorios baseDados={baseDados} />
     </div>
   );
 }

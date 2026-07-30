@@ -6,7 +6,8 @@ import {
 import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { 
-  ArrowLeft, MapPin, Landmark, PhoneCall, Users, FileWarning, Clock, ShieldAlert, Pencil, X 
+  ArrowLeft, MapPin, Landmark, Users, FileWarning, Clock, ShieldAlert, Pencil, X,
+  User, FileText, Briefcase
 } from "lucide-react";
 import BotaoExcluir from "../../components/BotaoExcluir";
 import { salvarEndereco, atualizarEndereco, excluirEndereco, salvarContaBancaria, atualizarContaBancaria, excluirContaBancaria } from "../../actions/anexos";
@@ -14,7 +15,6 @@ import { salvarDependente, atualizarDependente, excluirDependente, registrarDesl
 
 export const dynamic = "force-dynamic";
 
-// Função para calcular automaticamente o Tempo de Casa
 function calcularTempoDeCasa(admissao: string, desligamento: string | null) {
   const dataInicio = new Date(admissao);
   const dataFim = desligamento ? new Date(desligamento) : new Date();
@@ -35,7 +35,6 @@ export default async function PerfilServidorPage({
   params: Promise<{ id: string }>, 
   searchParams: Promise<{ editarDependente?: string, editarEndereco?: string, editarBanco?: string, editarDesligamento?: string }> 
 }) {
-  // 1. AWAIT OBRIGATÓRIO EM NEXT.JS 15/16 PARA PARÂMETROS
   const resolvedParams = await params;
   const servidorId = resolvedParams.id;
 
@@ -45,7 +44,6 @@ export default async function PerfilServidorPage({
   const editarBanco = resolvedSearchParams?.editarBanco === "true";
   const editarDesligamento = resolvedSearchParams?.editarDesligamento === "true";
 
-  // Buscando todos os dados relacionados ao servidor
   const [servidorBase] = await db.select().from(servidores).where(eq(servidores.id, servidorId));
   const [pessoal] = await db.select().from(dadosPessoais).where(eq(dadosPessoais.servidorId, servidorId));
   const [docs] = await db.select().from(documentos).where(eq(documentos.servidorId, servidorId));
@@ -59,13 +57,12 @@ export default async function PerfilServidorPage({
   }
 
   const tempoCasa = calcularTempoDeCasa(servidorBase.dataAdmissao, servidorBase.dataDesligamento);
-
   const dependenteEditando = editarDependenteId ? listaDependentes.find(d => d.id === editarDependenteId) : null;
 
   return (
     <div className="max-w-7xl mx-auto pb-12 space-y-8">
       
-      {/* CABEÇALHO */}
+      {/* CABEÇALHO PRINCIPAL */}
       <header className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-gray-200 pb-6 gap-4">
         <div className="flex items-center gap-4">
           <Link href="/servidores" className="p-2 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">
@@ -80,7 +77,10 @@ export default async function PerfilServidorPage({
               <span className="bg-slate-100 text-slate-700 text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
                 <Clock size={12}/> Tempo de Instituição: {tempoCasa}
               </span>
-              <span className="text-sm">CPF: {docs?.cpf}</span>
+              <span className="text-sm font-semibold text-blue-700 bg-blue-50 px-2 rounded-md border border-blue-100">
+                Matrícula: {servidorBase.matricula || "Pendente"}
+              </span>
+              <span className="text-sm border-l pl-2 ml-1">CPF: {docs?.cpf}</span>
             </p>
           </div>
         </div>
@@ -94,7 +94,106 @@ export default async function PerfilServidorPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
-        {/* COLUNA ESQUERDA */}
+        {/* COLUNA ESQUERDA (DADOS CADASTRAIS GERAIS) */}
+        <div className="space-y-8">
+          
+          {/* VÍNCULO INSTITUCIONAL */}
+          <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex items-center gap-2 border-b pb-4 mb-4">
+              <Briefcase className="text-blue-600" />
+              <h2 className="text-xl font-semibold text-gray-800">Vínculo Institucional</h2>
+            </div>
+            <div className="grid grid-cols-2 gap-y-4 text-sm text-gray-700">
+              <div><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">Matrícula</span>{servidorBase.matricula || "Não gerada"}</div>
+              <div><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">Tipo de Vínculo</span>{servidorBase.vinculo}</div>
+              <div><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">Data de Admissão</span>{servidorBase.dataAdmissao}</div>
+              <div><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">Status Atual</span>{servidorBase.status}</div>
+            </div>
+          </section>
+
+          {/* DADOS PESSOAIS */}
+          <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex items-center gap-2 border-b pb-4 mb-4">
+              <User className="text-blue-600" />
+              <h2 className="text-xl font-semibold text-gray-800">Dados Pessoais</h2>
+            </div>
+            <div className="grid grid-cols-2 gap-y-4 text-sm text-gray-700">
+              <div className="col-span-2"><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">Nome Completo</span>{pessoal.nome}</div>
+              <div className="col-span-2"><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">Nome Social</span>{pessoal.nomeSocial || "-"}</div>
+              <div><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">Nascimento</span>{pessoal.dataNascimento}</div>
+              <div><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">Telefone</span>{pessoal.telefone}</div>
+              <div className="col-span-2"><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">E-mail</span>{pessoal.email}</div>
+              <div><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">Gênero</span>{pessoal.genero.replace('_', ' ')}</div>
+              <div><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">Orientação Sexual</span>{pessoal.orientacaoSexual.replace('_', ' ')}</div>
+              <div><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">Cor/Etnia</span>{pessoal.grupoEtnico}</div>
+              <div><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">Estado Civil</span>{pessoal.estadoCivil.replace('_', ' ')}</div>
+              <div><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">Tipo Sanguíneo</span>{pessoal.tipoSanguineo || "-"}</div>
+            </div>
+          </section>
+
+          {/* DOCUMENTAÇÃO */}
+          <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex items-center gap-2 border-b pb-4 mb-4">
+              <FileText className="text-blue-600" />
+              <h2 className="text-xl font-semibold text-gray-800">Documentação</h2>
+            </div>
+            <div className="grid grid-cols-2 gap-y-4 text-sm text-gray-700">
+              <div><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">CPF</span>{docs?.cpf}</div>
+              <div><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">RG</span>{docs?.rg}</div>
+              <div><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">Título Eleitoral</span>{docs?.tituloEleitoral}</div>
+              <div><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">PIS/PASEP</span>{docs?.pisPasep || "-"}</div>
+            </div>
+          </section>
+
+          {/* ENDEREÇO RESIDENCIAL */}
+          <section className={`p-6 rounded-xl border shadow-sm transition-colors ${editarEndereco ? 'bg-amber-50 border-amber-300' : 'bg-white border-gray-200'}`}>
+             <div className="flex items-center justify-between border-b pb-4 mb-4">
+              <div className="flex items-center gap-2">
+                <MapPin className="text-blue-600" />
+                <h2 className="text-xl font-semibold text-gray-800">Endereço Residencial</h2>
+              </div>
+              {endereco && !editarEndereco && (
+                <div className="flex gap-2">
+                  <Link href={`/servidores/${servidorId}?editarEndereco=true`} scroll={false} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"><Pencil size={16} /></Link>
+                  <BotaoExcluir id={endereco.id} nomeRegistro="Endereço" acaoExcluir={excluirEndereco as any} />
+                </div>
+              )}
+              {editarEndereco && (
+                <Link href={`/servidores/${servidorId}`} scroll={false} className="text-gray-400 hover:text-red-500"><X size={20} /></Link>
+              )}
+            </div>
+
+            {endereco && !editarEndereco ? (
+              <div className="text-sm text-gray-700 space-y-2">
+                <p><span className="font-semibold">Logradouro:</span> {endereco.logradouro}, {endereco.numero}</p>
+                <p><span className="font-semibold">Bairro:</span> {endereco.bairro}</p>
+                <p><span className="font-semibold">Cidade/UF:</span> {endereco.cidade} - {endereco.estado}</p>
+                <p><span className="font-semibold">CEP:</span> {endereco.cep}</p>
+              </div>
+            ) : (
+              <form action={endereco ? atualizarEndereco : salvarEndereco} className="space-y-3">
+                <input type="hidden" name="servidorId" value={servidorId} />
+                {endereco && <input type="hidden" name="id" value={endereco.id} />}
+                
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-2"><input type="text" name="logradouro" defaultValue={endereco?.logradouro || ""} placeholder="Rua/Avenida" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
+                  <div><input type="text" name="numero" defaultValue={endereco?.numero || ""} placeholder="Nº" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><input type="text" name="bairro" defaultValue={endereco?.bairro || ""} placeholder="Bairro" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
+                  <div><input type="text" name="cep" defaultValue={endereco?.cep || ""} placeholder="CEP" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
+                </div>
+                <div><input type="text" name="cidade" defaultValue={endereco?.cidade || ""} placeholder="Cidade" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
+                <button type="submit" className={`w-full text-white p-2 rounded-md text-sm font-bold transition-colors ${endereco ? 'bg-amber-600 hover:bg-amber-700' : 'bg-slate-900 hover:bg-slate-800'}`}>
+                  {endereco ? "Salvar Alterações" : "Salvar Endereço"}
+                </button>
+              </form>
+            )}
+          </section>
+
+        </div>
+
+        {/* COLUNA DIREITA (DEPENDENTES, BANCO, DESLIGAMENTO) */}
         <div className="space-y-8">
           
           {/* DEPENDENTES E PENSIONISTAS */}
@@ -154,57 +253,48 @@ export default async function PerfilServidorPage({
             ))}
           </section>
 
-          {/* ENDEREÇO RESIDENCIAL */}
-          <section className={`p-6 rounded-xl border shadow-sm transition-colors ${editarEndereco ? 'bg-amber-50 border-amber-300' : 'bg-white border-gray-200'}`}>
-             <div className="flex items-center justify-between border-b pb-4 mb-4">
+          {/* DADOS BANCÁRIOS */}
+          <section className={`p-6 rounded-xl border shadow-sm transition-colors ${editarBanco ? 'bg-amber-50 border-amber-300' : 'bg-white border-gray-200'}`}>
+            <div className="flex items-center justify-between border-b pb-4 mb-4">
               <div className="flex items-center gap-2">
-                <MapPin className="text-blue-600" />
-                <h2 className="text-xl font-semibold text-gray-800">Endereço Residencial</h2>
+                <Landmark className="text-blue-600" />
+                <h2 className="text-xl font-semibold text-gray-800">Dados Bancários</h2>
               </div>
-              {endereco && !editarEndereco && (
+              {banco && !editarBanco && (
                 <div className="flex gap-2">
-                  <Link href={`/servidores/${servidorId}?editarEndereco=true`} scroll={false} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"><Pencil size={16} /></Link>
-                  <BotaoExcluir id={endereco.id} nomeRegistro="Endereço" acaoExcluir={excluirEndereco as any} />
+                  <Link href={`/servidores/${servidorId}?editarBanco=true`} scroll={false} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"><Pencil size={16} /></Link>
+                  <BotaoExcluir id={banco.id} nomeRegistro="Conta Bancária" acaoExcluir={excluirContaBancaria as any} />
                 </div>
               )}
-              {editarEndereco && (
+              {editarBanco && (
                 <Link href={`/servidores/${servidorId}`} scroll={false} className="text-gray-400 hover:text-red-500"><X size={20} /></Link>
               )}
             </div>
-
-            {endereco && !editarEndereco ? (
-              <div className="text-sm text-gray-700 space-y-2">
-                <p><span className="font-semibold">Logradouro:</span> {endereco.logradouro}, {endereco.numero}</p>
-                <p><span className="font-semibold">Bairro:</span> {endereco.bairro}</p>
-                <p><span className="font-semibold">Cidade/UF:</span> {endereco.cidade} - {endereco.estado}</p>
-                <p><span className="font-semibold">CEP:</span> {endereco.cep}</p>
+            
+            {banco && !editarBanco ? (
+               <div className="text-sm text-gray-700 space-y-2">
+                <p><span className="font-semibold">Titular:</span> {banco.nomeTitular}</p>
+                <p><span className="font-semibold">Banco:</span> {banco.banco}</p>
+                <p><span className="font-semibold">Agência/Conta:</span> {banco.agencia} / {banco.conta}</p>
               </div>
             ) : (
-              <form action={endereco ? atualizarEndereco : salvarEndereco} className="space-y-3">
+              <form action={banco ? atualizarContaBancaria : salvarContaBancaria} className="space-y-3">
                 <input type="hidden" name="servidorId" value={servidorId} />
-                {endereco && <input type="hidden" name="id" value={endereco.id} />}
+                {banco && <input type="hidden" name="id" value={banco.id} />}
                 
+                <div><input type="text" name="nomeTitular" defaultValue={banco?.nomeTitular || ""} placeholder="Nome Completo do Titular" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="col-span-2"><input type="text" name="logradouro" defaultValue={endereco?.logradouro || ""} placeholder="Rua/Avenida" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
-                  <div><input type="text" name="numero" defaultValue={endereco?.numero || ""} placeholder="Nº" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
+                  <div className="col-span-1"><input type="text" name="banco" defaultValue={banco?.banco || ""} placeholder="Banco" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
+                  <div className="col-span-1"><input type="text" name="agencia" defaultValue={banco?.agencia || ""} placeholder="Agência" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
+                  <div className="col-span-1"><input type="text" name="conta" defaultValue={banco?.conta || ""} placeholder="Conta" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><input type="text" name="bairro" defaultValue={endereco?.bairro || ""} placeholder="Bairro" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
-                  <div><input type="text" name="cep" defaultValue={endereco?.cep || ""} placeholder="CEP" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
-                </div>
-                <div><input type="text" name="cidade" defaultValue={endereco?.cidade || ""} placeholder="Cidade" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
-                <button type="submit" className={`w-full text-white p-2 rounded-md text-sm font-bold transition-colors ${endereco ? 'bg-amber-600 hover:bg-amber-700' : 'bg-slate-900 hover:bg-slate-800'}`}>
-                  {endereco ? "Salvar Alterações" : "Salvar Endereço"}
+                <button type="submit" className={`w-full text-white p-2 rounded-md text-sm font-bold transition-colors ${banco ? 'bg-amber-600 hover:bg-amber-700' : 'bg-slate-900 hover:bg-slate-800'}`}>
+                  {banco ? "Salvar Alterações" : "Salvar Dados Bancários"}
                 </button>
               </form>
             )}
           </section>
 
-        </div>
-
-        {/* COLUNA DIREITA */}
-        <div className="space-y-8">
-          
           {/* DESLIGAMENTO INSTITUCIONAL */}
           <section className={`p-6 rounded-xl border shadow-sm transition-colors ${editarDesligamento ? 'bg-amber-50 border-amber-300' : 'bg-white border-red-200'}`}>
             <div className="flex items-center justify-between border-b border-red-100 pb-4 mb-4">
@@ -248,48 +338,6 @@ export default async function PerfilServidorPage({
                 </div>
                 <button type="submit" className={`w-full text-white p-2 rounded-md text-sm font-bold flex justify-center items-center gap-2 transition-colors ${editarDesligamento ? 'bg-amber-600 hover:bg-amber-700' : 'bg-red-600 hover:bg-red-700'}`}>
                   {editarDesligamento ? "Salvar Correção" : <><ShieldAlert size={16} /> Confirmar Desligamento</>}
-                </button>
-              </form>
-            )}
-          </section>
-
-          {/* DADOS BANCÁRIOS */}
-          <section className={`p-6 rounded-xl border shadow-sm transition-colors ${editarBanco ? 'bg-amber-50 border-amber-300' : 'bg-white border-gray-200'}`}>
-            <div className="flex items-center justify-between border-b pb-4 mb-4">
-              <div className="flex items-center gap-2">
-                <Landmark className="text-blue-600" />
-                <h2 className="text-xl font-semibold text-gray-800">Dados Bancários</h2>
-              </div>
-              {banco && !editarBanco && (
-                <div className="flex gap-2">
-                  <Link href={`/servidores/${servidorId}?editarBanco=true`} scroll={false} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"><Pencil size={16} /></Link>
-                  <BotaoExcluir id={banco.id} nomeRegistro="Conta Bancária" acaoExcluir={excluirContaBancaria as any} />
-                </div>
-              )}
-              {editarBanco && (
-                <Link href={`/servidores/${servidorId}`} scroll={false} className="text-gray-400 hover:text-red-500"><X size={20} /></Link>
-              )}
-            </div>
-            
-            {banco && !editarBanco ? (
-               <div className="text-sm text-gray-700 space-y-2">
-                <p><span className="font-semibold">Titular:</span> {banco.nomeTitular}</p>
-                <p><span className="font-semibold">Banco:</span> {banco.banco}</p>
-                <p><span className="font-semibold">Agência/Conta:</span> {banco.agencia} / {banco.conta}</p>
-              </div>
-            ) : (
-              <form action={banco ? atualizarContaBancaria : salvarContaBancaria} className="space-y-3">
-                <input type="hidden" name="servidorId" value={servidorId} />
-                {banco && <input type="hidden" name="id" value={banco.id} />}
-                
-                <div><input type="text" name="nomeTitular" defaultValue={banco?.nomeTitular || ""} placeholder="Nome Completo do Titular" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="col-span-1"><input type="text" name="banco" defaultValue={banco?.banco || ""} placeholder="Banco" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
-                  <div className="col-span-1"><input type="text" name="agencia" defaultValue={banco?.agencia || ""} placeholder="Agência" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
-                  <div className="col-span-1"><input type="text" name="conta" defaultValue={banco?.conta || ""} placeholder="Conta" required className="w-full border p-2 text-sm rounded-md outline-none bg-white" /></div>
-                </div>
-                <button type="submit" className={`w-full text-white p-2 rounded-md text-sm font-bold transition-colors ${banco ? 'bg-amber-600 hover:bg-amber-700' : 'bg-slate-900 hover:bg-slate-800'}`}>
-                  {banco ? "Salvar Alterações" : "Salvar Dados Bancários"}
                 </button>
               </form>
             )}

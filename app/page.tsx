@@ -1,6 +1,6 @@
 // Arquivo: app/page.tsx
 import { db } from "../db/index";
-import { servidores, dadosPessoais, lotacoes } from "../db/schema";
+import { servidores, dadosPessoais, lotacoes, ausencias } from "../db/schema";
 import { eq, sql } from "drizzle-orm";
 import { Users, UserMinus, MapPin, Briefcase, Gift, Calendar, BarChart3, PieChart } from "lucide-react";
 import Link from "next/link";
@@ -10,11 +10,9 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   // Buscando métricas básicas
   const totalServidoresQuery = await db.select({ count: sql<number>`count(*)` }).from(servidores).where(eq(servidores.status, "ATIVO"));
-  const totalAfastadosQuery = await db.select({ count: sql<number>`count(*)` }).from(servidores).where(eq(servidores.status, "DESLIGADO"));
   const totalLotacoesQuery = await db.select({ count: sql<number>`count(*)` }).from(lotacoes);
 
   const totalAtivos = totalServidoresQuery[0]?.count || 0;
-  const totalAfastados = totalAfastadosQuery[0]?.count || 0;
   const totalLotacoes = totalLotacoesQuery[0]?.count || 0;
 
   // Busca dados para o Gráfico de Vínculos (Dinâmico)
@@ -25,6 +23,43 @@ export default async function DashboardPage() {
   .from(servidores)
   .where(eq(servidores.status, "ATIVO"))
   .groupBy(servidores.vinculo);
+
+  // 🚀 BUSCANDO DADOS REAIS DE AUSÊNCIAS E LICENÇAS
+  const listaAusencias = await db.select().from(ausencias);
+  const totalAfastados = listaAusencias.length; // Quantidade total cadastrada
+
+  // Lógica do Gráfico de Ausências (Últimos 6 meses)
+  const nomesMesesCurto = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+  
+  const ultimos6Meses = Array.from({ length: 6 }).map((_, i) => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - (5 - i));
+    return {
+      label: nomesMesesCurto[d.getMonth()],
+      mes: d.getMonth() + 1,
+      ano: d.getFullYear(),
+      val: 0
+    };
+  });
+
+  // Agrupando as ausências por mês no gráfico
+  listaAusencias.forEach(aus => {
+    // Tenta usar a data de início para agrupar. Se não tiver, usa a data de criação
+    const dataRef = (aus as any).dataInicio || (aus as any).criadoEm;
+    if (dataRef) {
+      const [ano, mes] = dataRef.split('T')[0].split('-'); // Suporta padrão ISO ou YYYY-MM-DD
+      const mesIndex = ultimos6Meses.findIndex(m => m.mes === parseInt(mes) && m.ano === parseInt(ano));
+      if (mesIndex !== -1) {
+        ultimos6Meses[mesIndex].val++;
+      }
+    } else {
+      // Se a ausência não tiver nenhuma data, joga no mês atual para refletir no gráfico
+      ultimos6Meses[5].val++;
+    }
+  });
+
+  // Define um teto visual para o gráfico não quebrar se os números forem pequenos
+  const maxAusencias = Math.max(...ultimos6Meses.map(m => m.val), 5); 
 
   // Buscando todos os servidores ativos para os Aniversariantes
   const listaServidores = await db.select({
@@ -98,10 +133,10 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* SESSÃO DE GRÁFICOS (Restaurada e Funcional) */}
+        {/* SESSÃO DE GRÁFICOS */}
         <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
           
-          {/* GRÁFICO 1: Distribuição por Vínculo (Dinâmico) */}
+          {/* GRÁFICO 1: Distribuição por Vínculo */}
           <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm flex flex-col">
             <div className="flex items-center gap-2 mb-6">
               <PieChart className="text-blue-600" size={20} />
@@ -130,7 +165,7 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          {/* GRÁFICO 2: Ausências e Licenças */}
+          {/* GRÁFICO 2: Ausências e Licenças (AGORA DINÂMICO!) */}
           <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm flex flex-col">
             <div className="flex items-center gap-2 mb-6">
               <BarChart3 className="text-orange-500" size={20} />
@@ -138,20 +173,25 @@ export default async function DashboardPage() {
             </div>
             
             <div className="flex-1 flex items-end justify-between gap-2 h-40 mt-4 border-b border-gray-100 pb-2 relative">
-              {/* Gráfico de Barras feito com CSS */}
-              {[
-                { label: 'Fev', val: 15 }, { label: 'Mar', val: 25 }, { label: 'Abr', val: 10 },
-                { label: 'Mai', val: 40 }, { label: 'Jun', val: 20 }, { label: 'Jul', val: 5 }
-              ].map((item, i) => (
-                <div key={i} className="flex flex-col items-center flex-1 group h-full justify-end">
-                  <div className="w-full max-w-[2.5rem] bg-orange-100 group-hover:bg-orange-500 rounded-t-md transition-colors relative flex items-end justify-center" style={{ height: `${item.val}%`, minHeight: '4px' }}>
-                    <span className="absolute -top-7 text-xs font-bold text-orange-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {item.val}
-                    </span>
+              {ultimos6Meses.map((item, i) => {
+                // Calcula a altura da barra em porcentagem baseada no mês com maior número de ausências
+                const alturaBarra = Math.round((item.val / maxAusencias) * 100);
+                
+                return (
+                  <div key={i} className="flex flex-col items-center flex-1 group h-full justify-end">
+                    <div 
+                      className="w-full max-w-[2.5rem] bg-orange-100 group-hover:bg-orange-500 rounded-t-md transition-colors relative flex items-end justify-center" 
+                      style={{ height: `${alturaBarra}%`, minHeight: '4px' }}
+                    >
+                      {/* O número aparece flutuando quando você passa o mouse por cima (hover) */}
+                      <span className="absolute -top-7 text-xs font-bold text-orange-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {item.val}
+                      </span>
+                    </div>
+                    <span className="text-xs font-medium text-gray-400 mt-3">{item.label}</span>
                   </div>
-                  <span className="text-xs font-medium text-gray-400 mt-3">{item.label}</span>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
 

@@ -1,11 +1,18 @@
 // Arquivo: app/servidores/novo/page.tsx
 import { cadastrarServidor } from "../../actions/servidores";
+import { db } from "../../db/index";
+import { cargos, lotacoes } from "../../db/schema"; // Importando as tabelas
 import Link from "next/link";
 import { ArrowLeft, User, FileText, Briefcase, Heart, Save } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-export default function NovoServidorPage() {
+// Transformamos a função em 'async' para poder puxar do banco
+export default async function NovoServidorPage() {
+  // Buscando as listas direto do banco de dados
+  const listaCargos = await db.select().from(cargos);
+  const listaLotacoes = await db.select().from(lotacoes);
+
   return (
     <div className="max-w-5xl mx-auto pb-12 space-y-6">
       
@@ -144,7 +151,7 @@ export default function NovoServidorPage() {
           </div>
         </section>
 
-        {/* SESSÃO 4: VÍNCULO INSTITUCIONAL (Com Cargo e Lotação) */}
+        {/* SESSÃO 4: VÍNCULO INSTITUCIONAL (COM SELECTS DO BANCO) */}
         <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <div className="flex items-center gap-2 border-b pb-4 mb-6">
             <Briefcase className="text-blue-600" />
@@ -170,11 +177,21 @@ export default function NovoServidorPage() {
             </div>
             <div className="md:col-span-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">Cargo *</label>
-              <input type="text" name="cargo" required placeholder="Ex: Enfermeiro, Analista..." className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+              <select name="cargo" required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                <option value="">Selecione um cargo...</option>
+                {listaCargos.map((c) => (
+                  <option key={c.id} value={c.nome}>{c.nome}</option>
+                ))}
+              </select>
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Lotação (Setor/Secretaria) *</label>
-              <input type="text" name="lotacao" required placeholder="Ex: Secretaria de Saúde, RH..." className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+              <select name="lotacao" required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                <option value="">Selecione uma lotação...</option>
+                {listaLotacoes.map((l) => (
+                  <option key={l.id} value={l.nome}>{l.nome}</option>
+                ))}
+              </select>
             </div>
           </div>
         </section>

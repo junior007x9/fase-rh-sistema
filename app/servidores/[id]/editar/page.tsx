@@ -1,6 +1,6 @@
 // Arquivo: app/servidores/[id]/editar/page.tsx
 import { db } from "../../../../db/index";
-import { servidores, dadosPessoais, documentos } from "../../../../db/schema";
+import { servidores, dadosPessoais, documentos, cargos, lotacoes } from "../../../../db/schema";
 import { eq } from "drizzle-orm";
 import { atualizarServidor } from "../../../actions/servidores";
 import Link from "next/link";
@@ -17,6 +17,10 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
   const [servidorBase] = await db.select().from(servidores).where(eq(servidores.id, servidorId));
   const [pessoal] = await db.select().from(dadosPessoais).where(eq(dadosPessoais.servidorId, servidorId));
   const [docs] = await db.select().from(documentos).where(eq(documentos.servidorId, servidorId));
+
+  // Busca as opções de cargos e lotações do banco
+  const listaCargos = await db.select().from(cargos);
+  const listaLotacoes = await db.select().from(lotacoes);
 
   if (!servidorBase || !pessoal || !docs) {
     redirect("/servidores");
@@ -162,7 +166,7 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
           </div>
         </section>
 
-        {/* SESSÃO 4: VÍNCULO INSTITUCIONAL (Com Cargo e Lotação) */}
+        {/* SESSÃO 4: VÍNCULO INSTITUCIONAL (COM SELECTS DO BANCO) */}
         <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <div className="flex items-center gap-2 border-b pb-4 mb-6">
             <Briefcase className="text-blue-600" />
@@ -188,11 +192,21 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
             </div>
             <div className="md:col-span-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">Cargo *</label>
-              <input type="text" name="cargo" defaultValue={servidorBase.cargo || ""} required placeholder="Ex: Enfermeiro, Analista..." className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+              <select name="cargo" defaultValue={servidorBase.cargo || ""} required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                <option value="">Selecione um cargo...</option>
+                {listaCargos.map((c) => (
+                  <option key={c.id} value={c.nome}>{c.nome}</option>
+                ))}
+              </select>
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Lotação (Setor/Secretaria) *</label>
-              <input type="text" name="lotacao" defaultValue={servidorBase.lotacao || ""} required placeholder="Ex: Secretaria de Saúde, RH..." className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+              <select name="lotacao" defaultValue={servidorBase.lotacao || ""} required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                <option value="">Selecione uma lotação...</option>
+                {listaLotacoes.map((l) => (
+                  <option key={l.id} value={l.nome}>{l.nome}</option>
+                ))}
+              </select>
             </div>
           </div>
         </section>

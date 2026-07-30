@@ -5,6 +5,7 @@ import { db } from "../../db/index";
 import { historicoTransferencias, servidores } from "../../db/schema";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { getSessaoUsuario } from "./auth";
 import { eq } from "drizzle-orm";
 import { registrarLogAuditoria } from "./auditoria";
@@ -30,7 +31,7 @@ export async function registrarTransferencia(formData: FormData) {
       motivo,
     });
 
-    // 2. Atualiza a lotação ATUAL do servidor na tabela principal (sem duplicar dados!)
+    // 2. Atualiza a lotação ATUAL do servidor na tabela principal
     await db.update(servidores)
       .set({ lotacao: lotacaoNova })
       .where(eq(servidores.id, servidorId));
@@ -40,5 +41,7 @@ export async function registrarTransferencia(formData: FormData) {
     throw new Error("Erro ao registrar transferência.");
   }
 
+  // Atualiza a página e fecha o modal removendo o parâmetro da URL
   revalidatePath(`/servidores/${servidorId}`);
+  redirect(`/servidores/${servidorId}`);
 }

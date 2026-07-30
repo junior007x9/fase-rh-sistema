@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, PieChart, LogOut, Shield, Briefcase, MapPin, Calendar, Clock } from "lucide-react";
+import { LayoutDashboard, Users, PieChart, LogOut, Shield, Briefcase, MapPin, Calendar, Clock, Calculator } from "lucide-react";
 import { sairDoSistema } from "../actions/logout";
 
 export default function Sidebar() {
@@ -59,18 +59,28 @@ export default function Sidebar() {
               <span className="font-medium text-sm">Ausências e Licenças</span>
             </Link>
           </li>
+          {/* FOLHA DE PAGAMENTO */}
+          <li>
+            <Link href="/folha" className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-emerald-400 hover:bg-slate-800 hover:text-emerald-300 transition-colors">
+              <Calculator size={18} />
+              <span className="font-medium text-sm">Folha de Pagamento</span>
+            </Link>
+          </li>
+          {/* RELATÓRIOS */}
           <li>
             <Link href="/relatorios" className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
               <PieChart size={18} />
               <span className="font-medium text-sm">Relatórios</span>
             </Link>
           </li>
+          {/* GESTÃO DE ACESSOS */}
           <li>
             <Link href="/usuarios" className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-purple-400 hover:bg-slate-800 hover:text-purple-300 transition-colors">
               <Shield size={18} />
               <span className="font-medium text-sm">Gestão de Acessos</span>
             </Link>
           </li>
+          {/* RECRUTAMENTO */}
           <li>
             <Link href="/recrutamento" className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
               <Briefcase size={18} />

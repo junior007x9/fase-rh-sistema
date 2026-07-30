@@ -61,7 +61,6 @@ export default async function PerfilServidorPage({
   const listaDependentes = await db.select().from(dependentesPensionistas).where(eq(dependentesPensionistas.servidorId, servidorId));
   const listaLotacoes = await db.select().from(lotacoes);
   
-  // Busca o Histórico de Transferências (do mais recente pro mais antigo)
   const historicoMovimentacoes = await db.select()
     .from(historicoTransferencias)
     .where(eq(historicoTransferencias.servidorId, servidorId))
@@ -75,9 +74,68 @@ export default async function PerfilServidorPage({
   const dependenteEditando = editarDependenteId ? listaDependentes.find(d => d.id === editarDependenteId) : null;
 
   return (
-    <div className="max-w-7xl mx-auto pb-12 space-y-8">
+    <div className="max-w-7xl mx-auto pb-12 space-y-8 relative">
       
-      {/* CABEÇALHO */}
+      {/* MODAL DE TRANSFERÊNCIA (POP-UP FLUTUANTE) */}
+      {abrirTransferencia && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div className="bg-blue-600 p-4 flex justify-between items-center text-white">
+              <div className="flex items-center gap-2">
+                <ArrowRightLeft size={20} />
+                <h3 className="font-bold text-lg">Transferir Lotação</h3>
+              </div>
+              <Link href={`/servidores/${servidorId}`} scroll={false} className="text-white/70 hover:text-white bg-white/10 hover:bg-white/20 p-1.5 rounded-md transition-colors">
+                <X size={20} />
+              </Link>
+            </div>
+            
+            <form action={registrarTransferencia} className="p-6">
+              <input type="hidden" name="servidorId" value={servidorId} />
+              <input type="hidden" name="lotacaoAnterior" value={servidorBase.lotacao || ""} />
+              
+              <div className="bg-blue-50 text-blue-800 text-sm p-4 rounded-lg border border-blue-100 mb-6 flex items-center gap-3">
+                <Briefcase className="text-blue-500 opacity-50" size={24}/>
+                <div>
+                  <span className="block text-xs uppercase font-bold text-blue-600/70 tracking-wider">Lotação Atual</span>
+                  <span className="font-semibold">{servidorBase.lotacao || "Nenhuma lotação informada"}</span>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Nova Lotação (Para onde vai?) *</label>
+                  <select name="lotacaoNova" required className="w-full border p-3 text-sm rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors">
+                    <option value="">Selecione o novo setor...</option>
+                    {listaLotacoes.map((l) => (
+                      <option key={l.id} value={l.nome}>{l.nome}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Data da Transferência *</label>
+                  <input type="date" name="dataOcorrencia" required className="w-full border p-3 text-sm rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Motivo / Documento (Opcional)</label>
+                  <input type="text" name="motivo" placeholder="Ex: Portaria Nº 123/2026, Remanejamento interno..." className="w-full border p-3 text-sm rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
+                </div>
+              </div>
+              
+              <div className="mt-8 flex justify-end gap-3">
+                <Link href={`/servidores/${servidorId}`} scroll={false} className="px-5 py-2.5 text-sm font-bold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                  Cancelar
+                </Link>
+                <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2.5 rounded-lg transition-colors flex items-center gap-2 shadow-md">
+                  <ArrowRightLeft size={18} /> Efetivar Transferência
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      
+      {/* CABEÇALHO DA PÁGINA */}
       <header className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-gray-200 pb-6 gap-4">
         <div className="flex items-center gap-4">
           <Link href="/servidores" className="p-2 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">
@@ -103,6 +161,7 @@ export default async function PerfilServidorPage({
           </div>
         </div>
         <div className="flex gap-2">
+          {/* BOTÃO QUE ABRE O MODAL DE TRANSFERÊNCIA */}
           <Link 
             href={`/servidores/${servidorId}?novaTransferencia=true`} 
             scroll={false}
@@ -164,60 +223,21 @@ export default async function PerfilServidorPage({
             </div>
           </section>
 
-          {/* NOVO: HISTÓRICO DE TRANSFERÊNCIAS */}
+          {/* HISTÓRICO DE TRANSFERÊNCIAS (APENAS A LISTA AGORA) */}
           <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between border-b pb-4 mb-4">
-              <div className="flex items-center gap-2">
-                <History className="text-blue-600" />
-                <h2 className="text-xl font-semibold text-gray-800">Histórico de Movimentações</h2>
-              </div>
-              {abrirTransferencia && (
-                <Link href={`/servidores/${servidorId}`} scroll={false} className="text-gray-400 hover:text-red-500"><X size={20} /></Link>
-              )}
+            <div className="flex items-center gap-2 border-b pb-4 mb-4">
+              <History className="text-blue-600" />
+              <h2 className="text-xl font-semibold text-gray-800">Histórico de Movimentações</h2>
             </div>
 
-            {/* FORMULÁRIO DE TRANSFERÊNCIA (Só aparece se clicar no botão lá no topo) */}
-            {abrirTransferencia && (
-              <form action={registrarTransferencia} className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-4 shadow-inner">
-                <input type="hidden" name="servidorId" value={servidorId} />
-                <input type="hidden" name="lotacaoAnterior" value={servidorBase.lotacao || ""} />
-                
-                <p className="text-sm text-blue-800 font-medium border-b border-blue-200 pb-2">Registrar nova transferência</p>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2">
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Nova Lotação (Para onde vai?) *</label>
-                    <select name="lotacaoNova" required className="w-full border p-2.5 text-sm rounded-md bg-white outline-none focus:ring-2 focus:ring-blue-500">
-                      <option value="">Selecione o novo setor...</option>
-                      {listaLotacoes.map((l) => (
-                        <option key={l.id} value={l.nome}>{l.nome}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Data da Ocorrência *</label>
-                    <input type="date" name="dataOcorrencia" required className="w-full border p-2.5 text-sm rounded-md bg-white outline-none focus:ring-2 focus:ring-blue-500" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Motivo (Opcional)</label>
-                    <input type="text" name="motivo" placeholder="Ex: Portaria Nº 123/2026" className="w-full border p-2.5 text-sm rounded-md bg-white outline-none focus:ring-2 focus:ring-blue-500" />
-                  </div>
-                </div>
-                <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold p-2.5 rounded-md transition-colors flex items-center justify-center gap-2">
-                  <ArrowRightLeft size={16} /> Confirmar Transferência
-                </button>
-              </form>
-            )}
-
-            {/* LISTA DO HISTÓRICO */}
             <div className="space-y-3 relative">
               {historicoMovimentacoes.length === 0 ? (
-                <p className="text-sm text-gray-500 italic text-center py-4">Nenhuma transferência registrada.</p>
+                <p className="text-sm text-gray-500 italic text-center py-4 bg-gray-50 rounded-lg border border-dashed">Nenhuma transferência registrada no histórico.</p>
               ) : (
                 <div className="absolute left-3 top-2 bottom-2 w-px bg-gray-200 z-0"></div>
               )}
 
-              {historicoMovimentacoes.map((mov, index) => (
+              {historicoMovimentacoes.map((mov) => (
                 <div key={mov.id} className="relative z-10 flex gap-4 items-start">
                   <div className="mt-1 w-6 h-6 rounded-full bg-blue-100 border-2 border-white flex items-center justify-center flex-shrink-0 shadow-sm">
                     <div className="w-2 h-2 rounded-full bg-blue-500"></div>

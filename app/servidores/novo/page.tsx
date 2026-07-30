@@ -1,13 +1,12 @@
 // Arquivo: app/servidores/novo/page.tsx
 import { cadastrarServidor } from "../../actions/servidores";
-import { db } from "../../db/index";
-import { cargos, lotacoes } from "../../db/schema"; // Importando as tabelas
+import { db } from "../../../db/index";
+import { cargos, lotacoes } from "../../../db/schema";
 import Link from "next/link";
 import { ArrowLeft, User, FileText, Briefcase, Heart, Save } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-// Transformamos a função em 'async' para poder puxar do banco
 export default async function NovoServidorPage() {
   // Buscando as listas direto do banco de dados
   const listaCargos = await db.select().from(cargos);

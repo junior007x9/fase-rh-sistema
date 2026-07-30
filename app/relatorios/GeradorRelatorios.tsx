@@ -23,8 +23,25 @@ type ServidorData = {
 
 export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorData[] }) {
   const [tipoFiltro, setTipoFiltro] = useState("TODOS");
-  const [mesFiltro, setMesFiltro] = useState("1"); // 1 a 12
+  const [mesFiltro, setMesFiltro] = useState("1");
   const [statusFiltro, setStatusFiltro] = useState("ATIVO");
+
+  // Função auxiliar para converter a imagem da pasta public para o PDF ler
+  const obterBase64DaImagem = async (url: string): Promise<string | null> => {
+    try {
+      const resposta = await fetch(url);
+      const blob = await resposta.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (erro) {
+      console.error("Erro ao carregar a logo para o PDF:", erro);
+      return null;
+    }
+  };
 
   // ==========================================
   // FUNÇÃO 1: GERAR EXCEL (CSV)
@@ -55,21 +72,20 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
   };
 
   // ==========================================
-  // FUNÇÃO 2: GERAR PDF (COM CORES DO MA E LOGO)
+  // FUNÇÃO 2: GERAR PDF (COM LOGO E CORES)
   // ==========================================
-  const baixarPDF = (dados: any[], nomeArquivo: string, tituloRelatorio: string) => {
+  const baixarPDF = async (dados: any[], nomeArquivo: string, tituloRelatorio: string) => {
     if (dados.length === 0) return alert("Nenhum dado encontrado para gerar o relatório.");
 
-    // Modo paisagem (landscape) para caber as colunas da tabela
     const doc = new jsPDF('landscape'); 
 
-    // Cores oficiais FASE-MA / Maranhão
+    // Cores oficiais
     const corAzul = [0, 51, 160];
     const corVermelha = [218, 41, 28];
     const corAmarela = [242, 169, 0];
     const corPreta = [0, 0, 0];
 
-    // 1. Desenhando a barra superior com as cores do Maranhão
+    // 1. Barra superior
     const pageWidth = doc.internal.pageSize.getWidth();
     doc.setFillColor(corVermelha[0], corVermelha[1], corVermelha[2]);
     doc.rect(0, 0, pageWidth / 3, 4, 'F');
@@ -78,21 +94,33 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
     doc.setFillColor(corAzul[0], corAzul[1], corAzul[2]);
     doc.rect((pageWidth / 3) * 2, 0, pageWidth / 3, 4, 'F');
 
-    // 2. Textos do Cabeçalho
+    // 2. Carregar e adicionar a Logo
+    // ALERTA: Troque "/logo.png" para o nome exato da imagem que está na sua pasta public!
+    const logoBase64 = await obterBase64DaImagem('/logo.png');
+    
+    // Se a logo existir, a gente empurra o texto mais pra direita. Se não, fica no cantinho.
+    const margemTexto = logoBase64 ? 42 : 14; 
+    
+    if (logoBase64) {
+      // Formato (PNG/JPEG), posição X(14), posição Y(8), largura(24), altura(24)
+      doc.addImage(logoBase64, 'PNG', 14, 8, 24, 24); 
+    }
+
+    // 3. Textos Corrigidos
     doc.setFont("helvetica", "bold");
     doc.setFontSize(18);
     doc.setTextColor(corPreta[0], corPreta[1], corPreta[2]);
-    doc.text("FASE-MA - Recursos Humanos", 14, 18);
+    doc.text("FASE/MA - Recursos Humanos", margemTexto, 15);
     
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(12);
-    doc.setTextColor(100, 100, 100); // Cinza escuro
-    doc.text("Fundação da Criança e do Adolescente do Maranhão", 14, 25);
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text("FUNDAÇÃO DE ATENDIMENTO SOCIOEDUCATIVO DO MARANHÃO - FASE/MA", margemTexto, 22);
     
     doc.setFont("helvetica", "italic");
     doc.setFontSize(11);
     doc.setTextColor(corAzul[0], corAzul[1], corAzul[2]);
-    doc.text(tituloRelatorio, 14, 32);
+    doc.text(tituloRelatorio, margemTexto, 29);
 
     // Data de geração
     const dataAtual = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -100,7 +128,7 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
     doc.setTextColor(150, 150, 150);
     doc.text(`Gerado em: ${dataAtual}`, pageWidth - 14, 18, { align: 'right' });
 
-    // 3. Montando a Tabela
+    // 4. Montando a Tabela
     const colunas = Object.keys(dados[0]);
     const linhas = dados.map(row => Object.values(row).map(val => val === null || val === undefined ? "-" : String(val)));
 
@@ -115,7 +143,7 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
         fontStyle: 'bold',
         halign: 'center'
       },
-      alternateRowStyles: { fillColor: [245, 248, 255] }, // Fundo azul bem clarinho alternado
+      alternateRowStyles: { fillColor: [245, 248, 255] }, 
       styles: { 
         fontSize: 7.5, 
         cellPadding: 2,
@@ -134,18 +162,17 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
   // ==========================================
   // FUNÇÃO PRINCIPAL: FILTRAR E DIRECIONAR
   // ==========================================
-  const prepararGeracao = (formato: "CSV" | "PDF") => {
+  // Adicionado o 'async' aqui para poder esperar o PDF gerar e a logo carregar
+  const prepararGeracao = async (formato: "CSV" | "PDF") => {
     let dadosFiltrados = [...baseDados];
     let nomeArquivo = "Relatorio_Servidores";
     let tituloRelatorio = "Relatório Geral de Servidores";
 
-    // Filtro de Status
     if (statusFiltro !== "TODOS") {
       dadosFiltrados = dadosFiltrados.filter(s => s.status === statusFiltro);
       tituloRelatorio += ` (${statusFiltro})`;
     }
 
-    // Filtro Específico
     if (tipoFiltro === "ANIVERSARIANTES") {
       dadosFiltrados = dadosFiltrados.filter(s => {
         if (!s.dataNascimento) return false;
@@ -165,7 +192,6 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
       tituloRelatorio = "Relatório de Servidores Contratados";
     }
 
-    // Limpeza de Colunas para ficar perfeito na visualização
     const dadosParaPlanilha = dadosFiltrados.map(s => ({
       "Matrícula": s.matricula || "-",
       "Nome Completo": s.nome,
@@ -179,7 +205,7 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
     }));
 
     if (formato === "CSV") baixarCSV(dadosParaPlanilha, nomeArquivo);
-    if (formato === "PDF") baixarPDF(dadosParaPlanilha, nomeArquivo, tituloRelatorio);
+    if (formato === "PDF") await baixarPDF(dadosParaPlanilha, nomeArquivo, tituloRelatorio);
   };
 
   return (
@@ -213,7 +239,7 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
           </select>
         </div>
 
-        {/* SELEÇÃO CONDICIONAL (Só aparece se for aniversariantes) */}
+        {/* SELEÇÃO CONDICIONAL */}
         {tipoFiltro === "ANIVERSARIANTES" && (
           <div className="bg-pink-50 p-4 rounded-lg border border-pink-200">
             <label className="block text-sm font-bold text-pink-900 mb-2 flex items-center gap-2">

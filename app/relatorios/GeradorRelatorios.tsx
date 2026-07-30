@@ -96,7 +96,7 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
 
     // 2. Carregar e adicionar a Logo
     // ALERTA: Troque "/logo.png" para o nome exato da imagem que está na sua pasta public!
-    const logoBase64 = await obterBase64DaImagem('/logo.png');
+    const logoBase64 = await obterBase64DaImagem('/logo.jpg');
     
     // Se a logo existir, a gente empurra o texto mais pra direita. Se não, fica no cantinho.
     const margemTexto = logoBase64 ? 42 : 14; 

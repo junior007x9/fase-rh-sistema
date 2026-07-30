@@ -6,13 +6,19 @@ import {
 import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { 
-  ArrowLeft, MapPin, Landmark, Users, FileWarning, Clock, ShieldAlert, Pencil, X, Briefcase 
+  ArrowLeft, MapPin, Landmark, Users, FileWarning, Clock, ShieldAlert, Pencil, X, Briefcase, DollarSign
 } from "lucide-react";
 import BotaoExcluir from "../../components/BotaoExcluir";
 import { salvarEndereco, atualizarEndereco, excluirEndereco, salvarContaBancaria, atualizarContaBancaria, excluirContaBancaria } from "../../actions/anexos";
 import { salvarDependente, atualizarDependente, excluirDependente, registrarDesligamento, atualizarDesligamento, excluirDesligamento } from "../../actions/complementos";
 
 export const dynamic = "force-dynamic";
+
+// Função para formatar moeda
+function formatarMoeda(valor: number | null | undefined) {
+  if (valor === null || valor === undefined) return "Não informada";
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+}
 
 // Função para calcular o Tempo de Casa
 function calcularTempoDeCasa(admissao: string, desligamento: string | null) {
@@ -99,24 +105,54 @@ export default async function PerfilServidorPage({
         {/* COLUNA ESQUERDA */}
         <div className="space-y-8">
 
-          {/* VÍNCULO INSTITUCIONAL */}
-          <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          {/* VÍNCULO INSTITUCIONAL E FOLHA */}
+          <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden">
+            
+            {/* Faixa decorativa lateral esquerda para dar destaque */}
+            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500"></div>
+
             <div className="flex items-center justify-between border-b pb-4 mb-4">
               <div className="flex items-center gap-2">
                 <Briefcase className="text-blue-600" />
-                <h2 className="text-xl font-semibold text-gray-800">Vínculo Institucional</h2>
+                <h2 className="text-xl font-semibold text-gray-800">Vínculo e Folha de Pagamento</h2>
               </div>
               <Link href={`/servidores/${servidorId}/editar`} className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1">
                 <Pencil size={14} /> Editar
               </Link>
             </div>
-            <div className="grid grid-cols-2 gap-y-4 text-sm text-gray-700">
+            
+            <div className="grid grid-cols-2 gap-y-5 gap-x-4 text-sm text-gray-700">
               <div><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">Matrícula</span>{servidorBase.matricula || "Não gerada"}</div>
               <div><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">Tipo de Vínculo</span>{servidorBase.vinculo}</div>
-              <div className="col-span-2"><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">Cargo</span>{servidorBase.cargo || "Não informado"}</div>
-              <div className="col-span-2"><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">Lotação (Setor/Secretaria)</span>{servidorBase.lotacao || "Não informada"}</div>
+              
+              <div className="col-span-2"><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">Cargo Efetivo / Contratado</span>{servidorBase.cargo || "Não informado"}</div>
+              
+              <div><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">Lotação Atual</span>{servidorBase.lotacao || "Não informada"}</div>
               <div><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">Data de Admissão</span>{servidorBase.dataAdmissao}</div>
-              <div><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider">Status Atual</span>{servidorBase.status}</div>
+              
+              {/* ---- NOVOS CAMPOS PARA FOLHA ---- */}
+              <div className="col-span-2 border-t pt-4 mt-2 grid grid-cols-2 gap-4">
+                <div className="col-span-2"><span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider mb-1">Função (Comissionada/Gratificada)</span>
+                  {servidorBase.funcao ? (
+                    <span className="inline-block px-2.5 py-1 bg-amber-100 text-amber-800 font-medium rounded text-xs">{servidorBase.funcao}</span>
+                  ) : "Nenhuma"}
+                </div>
+                
+                <div>
+                  <span className="font-semibold block text-xs text-gray-500 uppercase tracking-wider flex items-center gap-1">
+                    <Clock size={12}/> Jornada de Trabalho
+                  </span>
+                  {servidorBase.jornada || "Não informada"}
+                </div>
+                
+                <div>
+                  <span className="font-semibold block text-xs text-green-700 uppercase tracking-wider flex items-center gap-1">
+                    <DollarSign size={12}/> Remuneração Base
+                  </span>
+                  <span className="text-base font-bold text-gray-900">{formatarMoeda(servidorBase.remuneracaoBase)}</span>
+                </div>
+              </div>
+              {/* ---------------------------------- */}
             </div>
           </section>
           

@@ -3,7 +3,7 @@ import { cadastrarServidor } from "../../actions/servidores";
 import { db } from "../../../db/index";
 import { cargos, lotacoes } from "../../../db/schema";
 import Link from "next/link";
-import { ArrowLeft, User, FileText, Briefcase, Heart, Save } from "lucide-react";
+import { ArrowLeft, User, FileText, Briefcase, Heart, Save, DollarSign, Clock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -150,13 +150,15 @@ export default async function NovoServidorPage() {
           </div>
         </section>
 
-        {/* SESSÃO 4: VÍNCULO INSTITUCIONAL (COM SELECTS DO BANCO) */}
+        {/* SESSÃO 4: VÍNCULO INSTITUCIONAL (AGORA COM DADOS DE FOLHA) */}
         <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <div className="flex items-center gap-2 border-b pb-4 mb-6">
             <Briefcase className="text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-800">Vínculo Institucional</h2>
+            <h2 className="text-xl font-semibold text-gray-800">Vínculo Institucional e Base Salarial</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            {/* Linha 1 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Matrícula *</label>
               <input type="text" name="matricula" required placeholder="Ex: 123456" className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
@@ -174,6 +176,8 @@ export default async function NovoServidorPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Data de Admissão *</label>
               <input type="date" name="dataAdmissao" required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
             </div>
+
+            {/* Linha 2 (Cargos e Lotação) */}
             <div className="md:col-span-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">Cargo *</label>
               <select name="cargo" required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white">
@@ -192,6 +196,45 @@ export default async function NovoServidorPage() {
                 ))}
               </select>
             </div>
+
+            {/* Linha 3 (Folha de Pagamento) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Função (Opcional)</label>
+              <input type="text" name="funcao" placeholder="Ex: Diretor(a), Coordenador(a)" className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                <Clock size={14} className="text-gray-500" /> Jornada de Trabalho *
+              </label>
+              <select name="jornada" required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                <option value="">Selecione...</option>
+                <option value="20h Semanais">20h Semanais</option>
+                <option value="30h Semanais">30h Semanais</option>
+                <option value="40h Semanais">40h Semanais</option>
+                <option value="12x36 (Plantão)">12x36 (Plantão)</option>
+                <option value="24x72 (Plantão)">24x72 (Plantão)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                <DollarSign size={14} className="text-gray-500" /> Remuneração Base (Bruto) *
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-gray-500 font-medium">R$</span>
+                <input 
+                  type="number" 
+                  step="0.01" 
+                  min="0" 
+                  name="remuneracaoBase" 
+                  required 
+                  placeholder="0.00" 
+                  className="w-full border rounded-lg p-2.5 pl-10 outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
+                />
+              </div>
+            </div>
+
           </div>
         </section>
 

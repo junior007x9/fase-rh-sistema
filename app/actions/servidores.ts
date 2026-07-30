@@ -16,12 +16,18 @@ export async function cadastrarServidor(formData: FormData) {
 
   const servidorId = randomUUID();
 
-  // Vínculo
+  // Vínculo Institucional e Base Salarial (Atualizado para a Folha de Pagamento)
   const matricula = formData.get("matricula") as string;
   const cargo = formData.get("cargo") as string;
   const lotacao = formData.get("lotacao") as string;
   const vinculo = formData.get("vinculo") as "EFETIVO" | "CONTRATADO" | "COMISSIONADO" | "ESTAGIARIO";
   const dataAdmissao = formData.get("dataAdmissao") as string;
+  
+  // ---> NOVOS CAMPOS <---
+  const funcao = formData.get("funcao") as string;
+  const jornada = formData.get("jornada") as string;
+  const remuneracaoBaseStr = formData.get("remuneracaoBase") as string;
+  const remuneracaoBase = remuneracaoBaseStr ? parseFloat(remuneracaoBaseStr) : null;
 
   // Dados Pessoais
   const nome = formData.get("nome") as string;
@@ -47,6 +53,9 @@ export async function cadastrarServidor(formData: FormData) {
       matricula: matricula || null,
       cargo: cargo || null,
       lotacao: lotacao || null,
+      funcao: funcao || null,             // Adicionado
+      jornada: jornada || null,           // Adicionado
+      remuneracaoBase: remuneracaoBase,   // Adicionado
       vinculo,
       dataAdmissao,
       status: "ATIVO",
@@ -96,6 +105,12 @@ export async function atualizarServidor(formData: FormData) {
   const vinculo = formData.get("vinculo") as "EFETIVO" | "CONTRATADO" | "COMISSIONADO" | "ESTAGIARIO";
   const dataAdmissao = formData.get("dataAdmissao") as string;
 
+  // ---> NOVOS CAMPOS <---
+  const funcao = formData.get("funcao") as string;
+  const jornada = formData.get("jornada") as string;
+  const remuneracaoBaseStr = formData.get("remuneracaoBase") as string;
+  const remuneracaoBase = remuneracaoBaseStr ? parseFloat(remuneracaoBaseStr) : null;
+
   const nome = formData.get("nome") as string;
   const nomeSocial = formData.get("nomeSocial") as string;
   const dataNascimento = formData.get("dataNascimento") as string;
@@ -117,6 +132,9 @@ export async function atualizarServidor(formData: FormData) {
       matricula: matricula || null,
       cargo: cargo || null,
       lotacao: lotacao || null,
+      funcao: funcao || null,             // Adicionado
+      jornada: jornada || null,           // Adicionado
+      remuneracaoBase: remuneracaoBase,   // Adicionado
       vinculo,
       dataAdmissao,
     }).where(eq(servidores.id, servidorId));

@@ -1,5 +1,5 @@
 // Arquivo: db/schema.ts
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 
 // 1. Cargos e Lotações
@@ -22,6 +22,9 @@ export const servidores = sqliteTable('servidores', {
   matricula: text('matricula'),
   cargo: text('cargo'), // <-- ADICIONE ESTA LINHA
   lotacao: text('lotacao'), // <-- ADICIONE ESTA LINHA
+  funcao: text('funcao'), 
+  jornada: text('jornada'),
+  remuneracaoBase: real('remuneracao_base'),
   vinculo: text('vinculo', { enum: ['EFETIVO', 'CONTRATADO', 'COMISSIONADO', 'ESTAGIARIO'] }).notNull(),
   dataAdmissao: text('data_admissao').notNull(),
   dataDesligamento: text('data_desligamento'), 

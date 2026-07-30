@@ -5,6 +5,7 @@ import { useState } from "react";
 import { FileSpreadsheet, FileText, Filter, Calendar } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx"; // Importando a biblioteca de Excel profissional
 
 type ServidorData = {
   id: string;
@@ -26,10 +27,10 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
   const [mesFiltro, setMesFiltro] = useState("1");
   const [statusFiltro, setStatusFiltro] = useState("ATIVO");
 
-  // Função auxiliar para converter a imagem da pasta public para o PDF ler
   const obterBase64DaImagem = async (url: string): Promise<string | null> => {
     try {
       const resposta = await fetch(url);
+      if (!resposta.ok || !resposta.headers.get('content-type')?.includes('image')) return null;
       const blob = await resposta.blob();
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -37,55 +38,71 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
         reader.onerror = reject;
         reader.readAsDataURL(blob);
       });
-    } catch (erro) {
-      console.error("Erro ao carregar a logo para o PDF:", erro);
+    } catch {
       return null;
     }
   };
 
   // ==========================================
-  // FUNÇÃO 1: GERAR EXCEL (CSV)
+  // FUNÇÃO 1: GERAR EXCEL PROFISSIONAL (.XLSX)
   // ==========================================
-  const baixarCSV = (dados: any[], nomeArquivo: string) => {
-    if (dados.length === 0) return alert("Nenhum dado encontrado para gerar o relatório.");
+  const baixarExcel = (dados: any[], nomeArquivo: string, tituloRelatorio: string) => {
+    if (dados.length === 0) return alert("Nenhum dado encontrado para os filtros selecionados.");
 
-    const colunas = Object.keys(dados[0]);
-    const cabecalho = colunas.join(";");
+    // Criamos a estrutura de linhas da planilha com o cabeçalho institucional igual ao PDF
+    const dataAtual = new Date().toLocaleDateString('pt-BR');
+    
+    const linhasDoExcel = [
+      ["FASE/MA - Recursos Humanos"],
+      ["FUNDAÇÃO DE ATENDIMENTO SOCIOEDUCATIVO DO MARANHÃO - FASE/MA"],
+      [tituloRelatorio],
+      [`Gerado em: ${dataAtual}`],
+      [], // Linha em branco para espaçamento
+      // Cabeçalho da Tabela
+      Object.keys(dados[0])
+    ];
 
-    const linhas = dados.map(row => {
-      return colunas.map(coluna => {
-        const valor = row[coluna] === null || row[coluna] === undefined ? "" : String(row[coluna]);
-        return `"${valor.replace(/"/g, '""')}"`;
-      }).join(";");
+    // Adiciona os dados dos servidores abaixo
+    dados.forEach(row => {
+      linhasDoExcel.push(Object.values(row).map(val => val === null || val === undefined ? "-" : String(val)));
     });
 
-    const csvContent = "\uFEFF" + [cabecalho, ...linhas].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `${nomeArquivo}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Cria a planilha a partir da matriz de dados
+    const worksheet = XLSX.utils.aoa_to_sheet(linhasDoExcel);
+
+    // Ajuste automático da largura das colunas para não cortar os textos (como os nomes e lotações)
+    const colWidths = [
+      { wch: 12 }, // Matrícula
+      { wch: 30 }, // Nome Completo
+      { wch: 15 }, // CPF
+      { wch: 14 }, // Nascimento
+      { wch: 25 }, // Cargo
+      { wch: 35 }, // Lotação
+      { wch: 15 }, // Vínculo
+      { wch: 12 }, // Status
+      { wch: 14 }  // Admissão
+    ];
+    worksheet['!cols'] = colWidths;
+
+    // Cria o arquivo Workbook e dispara o download
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Relatório");
+    XLSX.writeFile(workbook, `${nomeArquivo}.xlsx`);
   };
 
   // ==========================================
   // FUNÇÃO 2: GERAR PDF (COM LOGO E CORES)
   // ==========================================
   const baixarPDF = async (dados: any[], nomeArquivo: string, tituloRelatorio: string) => {
-    if (dados.length === 0) return alert("Nenhum dado encontrado para gerar o relatório.");
+    if (dados.length === 0) return alert("Nenhum dado encontrado para os filtros selecionados.");
 
     const doc = new jsPDF('landscape'); 
 
-    // Cores oficiais
     const corAzul = [0, 51, 160];
     const corVermelha = [218, 41, 28];
     const corAmarela = [242, 169, 0];
     const corPreta = [0, 0, 0];
 
-    // 1. Barra superior
     const pageWidth = doc.internal.pageSize.getWidth();
     doc.setFillColor(corVermelha[0], corVermelha[1], corVermelha[2]);
     doc.rect(0, 0, pageWidth / 3, 4, 'F');
@@ -94,19 +111,18 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
     doc.setFillColor(corAzul[0], corAzul[1], corAzul[2]);
     doc.rect((pageWidth / 3) * 2, 0, pageWidth / 3, 4, 'F');
 
-    // 2. Carregar e adicionar a Logo
-    // ALERTA: Troque "/logo.png" para o nome exato da imagem que está na sua pasta public!
     const logoBase64 = await obterBase64DaImagem('/logo.jpg');
-    
-    // Se a logo existir, a gente empurra o texto mais pra direita. Se não, fica no cantinho.
-    const margemTexto = logoBase64 ? 42 : 14; 
+    let margemTexto = 14;
     
     if (logoBase64) {
-      // Formato (PNG/JPEG), posição X(14), posição Y(8), largura(24), altura(24)
-      doc.addImage(logoBase64, 'PNG', 14, 8, 24, 24); 
+      try {
+        doc.addImage(logoBase64, 'JPEG', 14, 8, 24, 24); 
+        margemTexto = 42; 
+      } catch {
+        console.warn("Falha ao desenhar a imagem no PDF.");
+      }
     }
 
-    // 3. Textos Corrigidos
     doc.setFont("helvetica", "bold");
     doc.setFontSize(18);
     doc.setTextColor(corPreta[0], corPreta[1], corPreta[2]);
@@ -122,13 +138,11 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
     doc.setTextColor(corAzul[0], corAzul[1], corAzul[2]);
     doc.text(tituloRelatorio, margemTexto, 29);
 
-    // Data de geração
     const dataAtual = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     doc.setFontSize(9);
     doc.setTextColor(150, 150, 150);
     doc.text(`Gerado em: ${dataAtual}`, pageWidth - 14, 18, { align: 'right' });
 
-    // 4. Montando a Tabela
     const colunas = Object.keys(dados[0]);
     const linhas = dados.map(row => Object.values(row).map(val => val === null || val === undefined ? "-" : String(val)));
 
@@ -150,9 +164,9 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
         valign: 'middle'
       },
       columnStyles: {
-        0: { halign: 'center', cellWidth: 18 }, // Matrícula
-        2: { halign: 'center', cellWidth: 20 }, // CPF
-        3: { halign: 'center', cellWidth: 18 }, // Data Nasc
+        0: { halign: 'center', cellWidth: 18 },
+        2: { halign: 'center', cellWidth: 20 },
+        3: { halign: 'center', cellWidth: 18 },
       }
     });
 
@@ -160,10 +174,9 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
   };
 
   // ==========================================
-  // FUNÇÃO PRINCIPAL: FILTRAR E DIRECIONAR
+  // FUNÇÃO PRINCIPAL
   // ==========================================
-  // Adicionado o 'async' aqui para poder esperar o PDF gerar e a logo carregar
-  const prepararGeracao = async (formato: "CSV" | "PDF") => {
+  const prepararGeracao = async (formato: "EXCEL" | "PDF") => {
     let dadosFiltrados = [...baseDados];
     let nomeArquivo = "Relatorio_Servidores";
     let tituloRelatorio = "Relatório Geral de Servidores";
@@ -204,7 +217,7 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
       "Admissão": s.dataAdmissao ? s.dataAdmissao.split('-').reverse().join('/') : "-"
     }));
 
-    if (formato === "CSV") baixarCSV(dadosParaPlanilha, nomeArquivo);
+    if (formato === "EXCEL") baixarExcel(dadosParaPlanilha, nomeArquivo, tituloRelatorio);
     if (formato === "PDF") await baixarPDF(dadosParaPlanilha, nomeArquivo, tituloRelatorio);
   };
 
@@ -222,7 +235,6 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
 
       <div className="space-y-6">
         
-        {/* SELEÇÃO PRINCIPAL */}
         <div>
           <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
             <Filter size={16} /> Que tipo de relatório deseja gerar?
@@ -239,7 +251,6 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
           </select>
         </div>
 
-        {/* SELEÇÃO CONDICIONAL */}
         {tipoFiltro === "ANIVERSARIANTES" && (
           <div className="bg-pink-50 p-4 rounded-lg border border-pink-200">
             <label className="block text-sm font-bold text-pink-900 mb-2 flex items-center gap-2">
@@ -258,7 +269,6 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
           </div>
         )}
 
-        {/* STATUS DO SERVIDOR */}
         <div>
           <label className="block text-sm font-bold text-gray-700 mb-2">Filtrar por Status</label>
           <div className="flex gap-4">
@@ -277,7 +287,6 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
           </div>
         </div>
 
-        {/* BOTÕES DE DOWNLOAD */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
           <button 
             onClick={() => prepararGeracao("PDF")}
@@ -287,10 +296,10 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
           </button>
           
           <button 
-            onClick={() => prepararGeracao("CSV")}
+            onClick={() => prepararGeracao("EXCEL")}
             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-md"
           >
-            <FileSpreadsheet size={20} /> Baixar Excel (CSV)
+            <FileSpreadsheet size={20} /> Baixar Excel (.xlsx)
           </button>
         </div>
 

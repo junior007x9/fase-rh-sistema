@@ -3,7 +3,9 @@ import { db } from "../../db/index";
 import { servidores, dadosPessoais, documentos } from "../../db/schema";
 import { eq, desc } from "drizzle-orm";
 import Link from "next/link";
-import { Plus, Users, Search, ChevronRight, BadgeCheck, AlertCircle } from "lucide-react";
+import { Plus, Users, Search, ChevronRight, BadgeCheck, AlertCircle, Pencil } from "lucide-react";
+import BotaoExcluir from "../components/BotaoExcluir";
+import { excluirServidor } from "../actions/servidores";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +61,7 @@ export default async function ServidoresPage() {
                 <th className="p-4">CPF</th>
                 <th className="p-4">Vínculo</th>
                 <th className="p-4">Status</th>
-                <th className="p-4 text-right">Ação</th>
+                <th className="p-4 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -90,12 +92,29 @@ export default async function ServidoresPage() {
                       )}
                     </td>
                     <td className="p-4 text-right">
-                      <Link 
-                        href={`/servidores/${srv.id}`}
-                        className="inline-flex items-center justify-center p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-semibold"
-                      >
-                        Abrir Perfil <ChevronRight size={16} />
-                      </Link>
+                      <div className="flex items-center justify-end gap-1">
+                        <Link 
+                          href={`/servidores/${srv.id}`}
+                          className="inline-flex items-center justify-center p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-semibold"
+                          title="Abrir Perfil Completo"
+                        >
+                          Perfil <ChevronRight size={16} className="ml-1" />
+                        </Link>
+                        
+                        <Link 
+                          href={`/servidores/${srv.id}/editar`}
+                          className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                          title="Editar Servidor"
+                        >
+                          <Pencil size={18} />
+                        </Link>
+                        
+                        <BotaoExcluir 
+                          id={srv.id} 
+                          nomeRegistro={srv.nome || "Servidor"} 
+                          acaoExcluir={excluirServidor as any} 
+                        />
+                      </div>
                     </td>
                   </tr>
                 ))

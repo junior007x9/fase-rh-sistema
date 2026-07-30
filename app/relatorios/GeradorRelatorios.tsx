@@ -5,7 +5,7 @@ import { useState } from "react";
 import { FileSpreadsheet, FileText, Filter, Calendar } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx"; // Importando a biblioteca de Excel profissional
+import * as XLSX from "xlsx-js-style"; // Usando o pacote com suporte a estilos profissionais
 
 type ServidorData = {
   id: string;
@@ -44,47 +44,84 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
   };
 
   // ==========================================
-  // FUNÇÃO 1: GERAR EXCEL PROFISSIONAL (.XLSX)
+  // FUNÇÃO 1: GERAR EXCEL COM CORES E ESTILO
   // ==========================================
   const baixarExcel = (dados: any[], nomeArquivo: string, tituloRelatorio: string) => {
     if (dados.length === 0) return alert("Nenhum dado encontrado para os filtros selecionados.");
 
-    // Criamos a estrutura de linhas da planilha com o cabeçalho institucional igual ao PDF
     const dataAtual = new Date().toLocaleDateString('pt-BR');
-    
-    const linhasDoExcel = [
-      ["FASE/MA - Recursos Humanos"],
-      ["FUNDAÇÃO DE ATENDIMENTO SOCIOEDUCATIVO DO MARANHÃO - FASE/MA"],
-      [tituloRelatorio],
-      [`Gerado em: ${dataAtual}`],
-      [], // Linha em branco para espaçamento
-      // Cabeçalho da Tabela
-      Object.keys(dados[0])
+    const chavesColunas = Object.keys(dados[0]);
+
+    const worksheetData: any[][] = [
+      [{ v: "FASE/MA - Recursos Humanos", s: { font: { bold: true, sz: 14, color: { rgb: "0033A0" } } } }],
+      [{ v: "FUNDAÇÃO DE ATENDIMENTO SOCIOEDUCATIVO DO MARANHÃO - FASE/MA", s: { font: { bold: true, sz: 10, color: { rgb: "555555" } } } }],
+      [{ v: tituloRelatorio, s: { font: { italic: true, bold: true, sz: 11, color: { rgb: "0033A0" } } } }],
+      [{ v: `Gerado em: ${dataAtual}`, s: { font: { italic: true, sz: 9, color: { rgb: "888888" } } } }],
+      [] // Linha em branco
     ];
 
-    // Adiciona os dados dos servidores abaixo
-    dados.forEach(row => {
-      linhasDoExcel.push(Object.values(row).map(val => val === null || val === undefined ? "-" : String(val)));
+    // Linha de Cabeçalho da Tabela Estilizada (Azul FASE-MA com texto Branco)
+    const cabecalhoEstilizado = chavesColunas.map(coluna => ({
+      v: coluna,
+      s: {
+        font: { bold: true, color: { rgb: "FFFFFF" }, sz: 11 },
+        fill: { fgColor: { rgb: "0033A0" } }, // Azul institucional
+        alignment: { horizontal: "center", vertical: "center" },
+        border: {
+          top: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          left: { style: "thin", color: { rgb: "000000" } },
+          right: { style: "thin", color: { rgb: "000000" } }
+        }
+      }
+    }));
+    worksheetData.push(cabecalhoEstilizado);
+
+    // Linhas de Dados com Cores Alternadas (Zebra)
+    dados.forEach((row, rowIndex) => {
+      const corFundo = rowIndex % 2 === 0 ? "F5F8FF" : "FFFFFF"; // Azul bem clarinho alternado
+      const linhaFormatada = chavesColunas.map(coluna => {
+        const valor = row[coluna] === null || row[coluna] === undefined ? "-" : String(row[coluna]);
+        
+        // Alinhamento central para algumas colunas específicas (Matrícula, CPF, Data)
+        let alinhamento: "left" | "center" = "left";
+        if (coluna === "Matrícula" || coluna === "CPF" || coluna === "Nascimento" || coluna === "Status" || coluna === "Admissão") {
+          alinhamento = "center";
+        }
+
+        return {
+          v: valor,
+          s: {
+            font: { sz: 10, color: { rgb: "000000" } },
+            fill: { fgColor: { rgb: corFundo } },
+            alignment: { horizontal: alinhamento, vertical: "center" },
+            border: {
+              top: { style: "thin", color: { rgb: "E0E0E0" } },
+              bottom: { style: "thin", color: { rgb: "E0E0E0" } },
+              left: { style: "thin", color: { rgb: "E0E0E0" } },
+              right: { style: "thin", color: { rgb: "E0E0E0" } }
+            }
+          }
+        };
+      });
+      worksheetData.push(linhaFormatada);
     });
 
-    // Cria a planilha a partir da matriz de dados
-    const worksheet = XLSX.utils.aoa_to_sheet(linhasDoExcel);
+    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
 
-    // Ajuste automático da largura das colunas para não cortar os textos (como os nomes e lotações)
-    const colWidths = [
-      { wch: 12 }, // Matrícula
-      { wch: 30 }, // Nome Completo
-      { wch: 15 }, // CPF
+    // Largura automática ajustada para as colunas
+    worksheet['!cols'] = [
+      { wch: 15 }, // Matrícula
+      { wch: 32 }, // Nome Completo
+      { wch: 16 }, // CPF
       { wch: 14 }, // Nascimento
       { wch: 25 }, // Cargo
-      { wch: 35 }, // Lotação
-      { wch: 15 }, // Vínculo
+      { wch: 38 }, // Lotação
+      { wch: 16 }, // Vínculo
       { wch: 12 }, // Status
       { wch: 14 }  // Admissão
     ];
-    worksheet['!cols'] = colWidths;
 
-    // Cria o arquivo Workbook e dispara o download
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Relatório");
     XLSX.writeFile(workbook, `${nomeArquivo}.xlsx`);
@@ -152,7 +189,7 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
       startY: 38,
       theme: 'grid',
       headStyles: { 
-        fillColor: corAzul as [number, number, number],
+        fillColor: corAzul as [number, number, number], 
         textColor: 255, 
         fontStyle: 'bold',
         halign: 'center'

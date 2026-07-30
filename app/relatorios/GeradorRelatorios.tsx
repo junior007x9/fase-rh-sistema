@@ -152,7 +152,7 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
       startY: 38,
       theme: 'grid',
       headStyles: { 
-        fillColor: corAzul as [number, number, number], 
+        fillColor: corAzul as [number, number, number],
         textColor: 255, 
         fontStyle: 'bold',
         halign: 'center'

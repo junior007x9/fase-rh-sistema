@@ -20,12 +20,19 @@ export default async function AusenciasPage({
   params, 
   searchParams 
 }: { 
-  params: { id: string }, 
-  searchParams: { editarPeriodo?: string, editarAusencia?: string } 
+  params: Promise<{ id: string }>, 
+  searchParams: Promise<{ editarPeriodo?: string, editarAusencia?: string }> 
 }) {
-  const servidorId = params.id;
+  // Await nos parâmetros (Padrão Next.js 15+)
+  const resolvedParams = await params;
+  const servidorId = resolvedParams.id;
+  
+  const resolvedSearchParams = await searchParams;
+  const editarPeriodoId = resolvedSearchParams?.editarPeriodo;
+  const editarAusenciaId = resolvedSearchParams?.editarAusencia;
 
   // Buscando dados do servidor
+  const [servidorBase] = await db.select().from(servidores).where(eq(servidores.id, servidorId));
   const [pessoal] = await db.select().from(dadosPessoais).where(eq(dadosPessoais.servidorId, servidorId));
   
   // Buscando Períodos Aquisitivos
@@ -38,11 +45,11 @@ export default async function AusenciasPage({
     .where(eq(eventosAusencia.servidorId, servidorId))
     .orderBy(desc(eventosAusencia.criadoEm));
 
-  if (!pessoal) return <div className="p-8 text-center text-red-500 font-bold">Servidor não encontrado.</div>;
+  if (!pessoal || !servidorBase) return <div className="p-8 text-center text-red-500 font-bold">Servidor não encontrado.</div>;
 
   // Estados de edição via URL
-  const periodoEditando = searchParams.editarPeriodo ? periodos.find(p => p.id === searchParams.editarPeriodo) : null;
-  const ausenciaEditando = searchParams.editarAusencia ? ausencias.find(a => a.id === searchParams.editarAusencia) : null;
+  const periodoEditando = editarPeriodoId ? periodos.find(p => p.id === editarPeriodoId) : null;
+  const ausenciaEditando = editarAusenciaId ? ausencias.find(a => a.id === editarAusenciaId) : null;
 
   return (
     <div className="max-w-6xl mx-auto pb-12 space-y-8">
@@ -54,7 +61,12 @@ export default async function AusenciasPage({
           </Link>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Férias e Ausências</h1>
-            <p className="text-gray-500 mt-1">Servidor(a): <span className="font-semibold">{pessoal.nome}</span></p>
+            <p className="text-gray-500 mt-1 flex items-center gap-2">
+              Servidor(a): <span className="font-semibold">{pessoal.nome}</span>
+              <span className="text-xs bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-md border border-blue-200">
+                Matrícula: {servidorBase.matricula || "Não informada"}
+              </span>
+            </p>
           </div>
         </div>
       </header>

@@ -2,7 +2,9 @@
 "use client";
 
 import { useState } from "react";
-import { FileSpreadsheet, Download, Filter, Calendar } from "lucide-react";
+import { FileSpreadsheet, FileText, Filter, Calendar } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 type ServidorData = {
   id: string;
@@ -24,15 +26,14 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
   const [mesFiltro, setMesFiltro] = useState("1"); // 1 a 12
   const [statusFiltro, setStatusFiltro] = useState("ATIVO");
 
-  // Função para exportar JSON para CSV
+  // ==========================================
+  // FUNÇÃO 1: GERAR EXCEL (CSV)
+  // ==========================================
   const baixarCSV = (dados: any[], nomeArquivo: string) => {
-    if (dados.length === 0) {
-      alert("Nenhum dado encontrado para gerar o relatório.");
-      return;
-    }
+    if (dados.length === 0) return alert("Nenhum dado encontrado para gerar o relatório.");
 
     const colunas = Object.keys(dados[0]);
-    const cabecalho = colunas.join(";"); // Usando ponto e vírgula para abrir certinho no Excel PT-BR
+    const cabecalho = colunas.join(";");
 
     const linhas = dados.map(row => {
       return colunas.map(coluna => {
@@ -41,7 +42,7 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
       }).join(";");
     });
 
-    const csvContent = "\uFEFF" + [cabecalho, ...linhas].join("\n"); // \uFEFF força o UTF-8 no Excel (acentos corretos)
+    const csvContent = "\uFEFF" + [cabecalho, ...linhas].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     
@@ -53,58 +54,143 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
     document.body.removeChild(link);
   };
 
-  const gerarRelatorio = () => {
+  // ==========================================
+  // FUNÇÃO 2: GERAR PDF (COM CORES DO MA E LOGO)
+  // ==========================================
+  const baixarPDF = (dados: any[], nomeArquivo: string, tituloRelatorio: string) => {
+    if (dados.length === 0) return alert("Nenhum dado encontrado para gerar o relatório.");
+
+    // Modo paisagem (landscape) para caber as colunas da tabela
+    const doc = new jsPDF('landscape'); 
+
+    // Cores oficiais FASE-MA / Maranhão
+    const corAzul = [0, 51, 160];
+    const corVermelha = [218, 41, 28];
+    const corAmarela = [242, 169, 0];
+    const corPreta = [0, 0, 0];
+
+    // 1. Desenhando a barra superior com as cores do Maranhão
+    const pageWidth = doc.internal.pageSize.getWidth();
+    doc.setFillColor(corVermelha[0], corVermelha[1], corVermelha[2]);
+    doc.rect(0, 0, pageWidth / 3, 4, 'F');
+    doc.setFillColor(corAmarela[0], corAmarela[1], corAmarela[2]);
+    doc.rect(pageWidth / 3, 0, pageWidth / 3, 4, 'F');
+    doc.setFillColor(corAzul[0], corAzul[1], corAzul[2]);
+    doc.rect((pageWidth / 3) * 2, 0, pageWidth / 3, 4, 'F');
+
+    // 2. Textos do Cabeçalho
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.setTextColor(corPreta[0], corPreta[1], corPreta[2]);
+    doc.text("FASE-MA - Recursos Humanos", 14, 18);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(12);
+    doc.setTextColor(100, 100, 100); // Cinza escuro
+    doc.text("Fundação da Criança e do Adolescente do Maranhão", 14, 25);
+    
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(11);
+    doc.setTextColor(corAzul[0], corAzul[1], corAzul[2]);
+    doc.text(tituloRelatorio, 14, 32);
+
+    // Data de geração
+    const dataAtual = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    doc.setFontSize(9);
+    doc.setTextColor(150, 150, 150);
+    doc.text(`Gerado em: ${dataAtual}`, pageWidth - 14, 18, { align: 'right' });
+
+    // 3. Montando a Tabela
+    const colunas = Object.keys(dados[0]);
+    const linhas = dados.map(row => Object.values(row).map(val => val === null || val === undefined ? "-" : String(val)));
+
+    autoTable(doc, {
+      head: [colunas],
+      body: linhas,
+      startY: 38,
+      theme: 'grid',
+      headStyles: { 
+        fillColor: corAzul as [number, number, number], 
+        textColor: 255, 
+        fontStyle: 'bold',
+        halign: 'center'
+      },
+      alternateRowStyles: { fillColor: [245, 248, 255] }, // Fundo azul bem clarinho alternado
+      styles: { 
+        fontSize: 7.5, 
+        cellPadding: 2,
+        valign: 'middle'
+      },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 18 }, // Matrícula
+        2: { halign: 'center', cellWidth: 20 }, // CPF
+        3: { halign: 'center', cellWidth: 18 }, // Data Nasc
+      }
+    });
+
+    doc.save(`${nomeArquivo}.pdf`);
+  };
+
+  // ==========================================
+  // FUNÇÃO PRINCIPAL: FILTRAR E DIRECIONAR
+  // ==========================================
+  const prepararGeracao = (formato: "CSV" | "PDF") => {
     let dadosFiltrados = [...baseDados];
     let nomeArquivo = "Relatorio_Servidores";
+    let tituloRelatorio = "Relatório Geral de Servidores";
 
-    // Aplica o filtro de Ativos/Desligados sempre
+    // Filtro de Status
     if (statusFiltro !== "TODOS") {
       dadosFiltrados = dadosFiltrados.filter(s => s.status === statusFiltro);
+      tituloRelatorio += ` (${statusFiltro})`;
     }
 
-    // Aplica filtros específicos
+    // Filtro Específico
     if (tipoFiltro === "ANIVERSARIANTES") {
       dadosFiltrados = dadosFiltrados.filter(s => {
         if (!s.dataNascimento) return false;
         const mesNascimento = parseInt(s.dataNascimento.split('-')[1]);
         return mesNascimento === parseInt(mesFiltro);
       });
-      nomeArquivo = `Aniversariantes_Mes_${mesFiltro}`;
+      const nomesMeses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+      nomeArquivo = `Aniversariantes_${nomesMeses[parseInt(mesFiltro)-1]}`;
+      tituloRelatorio = `Relatório de Aniversariantes - Mês: ${nomesMeses[parseInt(mesFiltro)-1]}`;
     } else if (tipoFiltro === "EFETIVOS") {
       dadosFiltrados = dadosFiltrados.filter(s => s.vinculo === "EFETIVO");
       nomeArquivo = "Servidores_Efetivos";
+      tituloRelatorio = "Relatório de Servidores Efetivos";
     } else if (tipoFiltro === "CONTRATADOS") {
       dadosFiltrados = dadosFiltrados.filter(s => s.vinculo === "CONTRATADO");
       nomeArquivo = "Servidores_Contratados";
+      tituloRelatorio = "Relatório de Servidores Contratados";
     }
 
-    // Mapear os dados para deixar a planilha amigável (remover IDs inúteis, formatar nomes de colunas)
+    // Limpeza de Colunas para ficar perfeito na visualização
     const dadosParaPlanilha = dadosFiltrados.map(s => ({
       "Matrícula": s.matricula || "-",
       "Nome Completo": s.nome,
       "CPF": s.cpf,
-      "Data Nascimento": s.dataNascimento ? s.dataNascimento.split('-').reverse().join('/') : "-", // Muda de YYYY-MM-DD para DD/MM/YYYY
+      "Nascimento": s.dataNascimento ? s.dataNascimento.split('-').reverse().join('/') : "-",
       "Cargo": s.cargo || "-",
       "Lotação": s.lotacao || "-",
       "Vínculo": s.vinculo,
       "Status": s.status,
-      "Data Admissão": s.dataAdmissao ? s.dataAdmissao.split('-').reverse().join('/') : "-",
-      "Telefone": s.telefone,
-      "E-mail": s.email
+      "Admissão": s.dataAdmissao ? s.dataAdmissao.split('-').reverse().join('/') : "-"
     }));
 
-    baixarCSV(dadosParaPlanilha, nomeArquivo);
+    if (formato === "CSV") baixarCSV(dadosParaPlanilha, nomeArquivo);
+    if (formato === "PDF") baixarPDF(dadosParaPlanilha, nomeArquivo, tituloRelatorio);
   };
 
   return (
     <div className="bg-white p-8 rounded-xl border border-gray-200 shadow-sm max-w-3xl">
       <div className="flex items-center gap-3 mb-6 border-b pb-4">
         <div className="bg-blue-100 p-3 rounded-lg text-blue-700">
-          <FileSpreadsheet size={24} />
+          <FileText size={24} />
         </div>
         <div>
           <h2 className="text-xl font-bold text-gray-800">Parâmetros do Relatório</h2>
-          <p className="text-sm text-gray-500">Selecione o que deseja exportar para o Excel (CSV).</p>
+          <p className="text-sm text-gray-500">Gere relatórios customizados com a identidade da FASE-MA.</p>
         </div>
       </div>
 
@@ -165,12 +251,22 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
           </div>
         </div>
 
-        <button 
-          onClick={gerarRelatorio}
-          className="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-md"
-        >
-          <Download size={20} /> Baixar Relatório (Excel / CSV)
-        </button>
+        {/* BOTÕES DE DOWNLOAD */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <button 
+            onClick={() => prepararGeracao("PDF")}
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-md"
+          >
+            <FileText size={20} /> Baixar PDF
+          </button>
+          
+          <button 
+            onClick={() => prepararGeracao("CSV")}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-md"
+          >
+            <FileSpreadsheet size={20} /> Baixar Excel (CSV)
+          </button>
+        </div>
 
       </div>
     </div>

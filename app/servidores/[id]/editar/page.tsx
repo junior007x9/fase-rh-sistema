@@ -53,7 +53,7 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo *</label>
-              <input type="text" name="nome" defaultValue={pessoal.nome} required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+              <input type="text" name="nome" defaultValue={pessoal.nome || ""} required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Nome Social (Opcional)</label>
@@ -61,15 +61,15 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Data de Nascimento *</label>
-              <input type="date" name="dataNascimento" defaultValue={pessoal.dataNascimento} required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+              <input type="date" name="dataNascimento" defaultValue={pessoal.dataNascimento || ""} required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Telefone *</label>
-              <input type="text" name="telefone" defaultValue={pessoal.telefone} required placeholder="(00) 00000-0000" className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+              <input type="text" name="telefone" defaultValue={pessoal.telefone || ""} required placeholder="(00) 00000-0000" className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">E-mail Profissional ou Pessoal *</label>
-              <input type="email" name="email" defaultValue={pessoal.email} required placeholder="email@exemplo.com" className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+              <input type="email" name="email" defaultValue={pessoal.email || ""} required placeholder="email@exemplo.com" className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
             </div>
           </div>
         </section>
@@ -83,15 +83,15 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">CPF *</label>
-              <input type="text" name="cpf" defaultValue={docs.cpf} required placeholder="000.000.000-00" className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+              <input type="text" name="cpf" defaultValue={docs.cpf || ""} required placeholder="000.000.000-00" className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">RG *</label>
-              <input type="text" name="rg" defaultValue={docs.rg} required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+              <input type="text" name="rg" defaultValue={docs.rg || ""} required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Título Eleitoral *</label>
-              <input type="text" name="tituloEleitoral" defaultValue={docs.tituloEleitoral} required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+              <input type="text" name="tituloEleitoral" defaultValue={docs.tituloEleitoral || ""} required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">PIS/PASEP (Opcional)</label>
@@ -109,7 +109,7 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Gênero *</label>
-              <select name="genero" defaultValue={pessoal.genero} required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+              <select name="genero" defaultValue={pessoal.genero || ""} required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white">
                 <option value="MASCULINO_CISGENERO">Masculino Cisgênero</option>
                 <option value="FEMININO_CISGENERO">Feminino Cisgênero</option>
                 <option value="MASCULINO_TRANSGENERO">Masculino Transgênero</option>
@@ -121,7 +121,7 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Orientação Sexual *</label>
-              <select name="orientacaoSexual" defaultValue={pessoal.orientacaoSexual} required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+              <select name="orientacaoSexual" defaultValue={pessoal.orientacaoSexual || ""} required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white">
                 <option value="HETEROSSEXUAL">Heterossexual</option>
                 <option value="HOMOSSEXUAL">Homossexual</option>
                 <option value="BISSEXUAL">Bissexual</option>
@@ -131,7 +131,7 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Cor/Etnia *</label>
-              <select name="grupoEtnico" defaultValue={pessoal.grupoEtnico} required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+              <select name="grupoEtnico" defaultValue={pessoal.grupoEtnico || ""} required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white">
                 <option value="BRANCA">Branca</option>
                 <option value="PRETA">Preta</option>
                 <option value="PARDA">Parda</option>
@@ -142,7 +142,7 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Estado Civil *</label>
-              <select name="estadoCivil" defaultValue={pessoal.estadoCivil} required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+              <select name="estadoCivil" defaultValue={pessoal.estadoCivil || ""} required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white">
                 <option value="SOLTEIRO">Solteiro(a)</option>
                 <option value="CASADO">Casado(a)</option>
                 <option value="DIVORCIADO">Divorciado(a)</option>
@@ -176,7 +176,7 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Vínculo *</label>
-              <select name="vinculo" defaultValue={servidorBase.vinculo} required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+              <select name="vinculo" defaultValue={servidorBase.vinculo || ""} required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white">
                 <option value="EFETIVO">Efetivo</option>
                 <option value="CONTRATADO">Contratado</option>
                 <option value="COMISSIONADO">Comissionado</option>
@@ -185,7 +185,7 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Data de Admissão *</label>
-              <input type="date" name="dataAdmissao" defaultValue={servidorBase.dataAdmissao} required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+              <input type="date" name="dataAdmissao" defaultValue={servidorBase.dataAdmissao || ""} required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
             </div>
           </div>
         </section>

@@ -1,10 +1,10 @@
 // Arquivo: app/components/BotaoImprimirFicha.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { Printer, Loader2 } from "lucide-react";
+import { Printer, Loader2, Image as ImageIcon } from "lucide-react";
 
 type Props = {
   servidor: any;
@@ -14,32 +14,56 @@ type Props = {
 
 export default function BotaoImprimirFicha({ servidor, pessoal, ferias }: Props) {
   const [gerando, setGerando] = useState(false);
+  const inputFotoRef = useRef<HTMLInputElement>(null);
 
-  const gerarFichaPDF = async () => {
+  // Lê a foto selecionada no computador e converte para texto (Base64) para o PDF
+  const lerArquivoComoBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleGerarComFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        const fotoBase64 = await lerArquivoComoBase64(file);
+        await gerarFichaPDF(fotoBase64);
+      } catch (error) {
+        console.error("Erro ao ler foto", error);
+        alert("Ocorreu um erro ao ler a imagem. Tente outra foto.");
+      }
+    }
+    // Limpa o input para poder selecionar a mesma foto novamente, se necessário
+    if (inputFotoRef.current) inputFotoRef.current.value = "";
+  };
+
+  const gerarFichaPDF = async (fotoServidorBase64: string | null = null) => {
     setGerando(true);
     
     try {
       const doc = new jsPDF();
       
       // ==========================================
-      // 1. CABEÇALHO E LOGOMARCA OFICIAL
+      // 1. CABEÇALHO E LOGOMARCA OFICIAL (CORRIGIDO PARA JPG)
       // ==========================================
       try {
         const img = new Image();
-        img.src = "/logo.png"; // Caminho da logo oficial na pasta public
+        img.src = "/logo.jpg"; // Lendo a sua logo.jpg da pasta public
         
         await new Promise((resolve, reject) => {
           img.onload = resolve;
           img.onerror = reject;
         });
         
-        // Inserir Logo: X, Y, Largura, Altura
-        doc.addImage(img, "PNG", 14, 10, 35, 18);
+        doc.addImage(img, "JPEG", 14, 10, 35, 18); // Imprime a logo
         
-        // Textos deslocados para a direita para dar espaço à logo
         doc.setFont("helvetica", "bold");
         doc.setFontSize(14);
-        doc.setTextColor(0, 51, 160); // Azul Escuro Institucional
+        doc.setTextColor(0, 51, 160);
         doc.text("FASE/MA - RECURSOS HUMANOS", 55, 18);
         
         doc.setFont("helvetica", "normal");
@@ -47,7 +71,6 @@ export default function BotaoImprimirFicha({ servidor, pessoal, ferias }: Props)
         doc.setTextColor(100, 100, 100);
         doc.text("FUNDAÇÃO DE ATENDIMENTO SOCIOEDUCATIVO DO MARANHÃO", 55, 23);
       } catch (e) {
-        // Fallback: Se a logo não for encontrada na pasta public, imprime sem ela
         doc.setFont("helvetica", "bold");
         doc.setFontSize(14);
         doc.setTextColor(0, 51, 160);
@@ -59,28 +82,31 @@ export default function BotaoImprimirFicha({ servidor, pessoal, ferias }: Props)
         doc.text("FUNDAÇÃO DE ATENDIMENTO SOCIOEDUCATIVO DO MARANHÃO", 14, 23);
       }
 
-      // Título do Documento
       doc.setFont("helvetica", "bold");
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.text("FICHA DE REGISTRO DE EMPREGADO", 14, 40);
 
       // ==========================================
-      // 2. QUADRO DA FOTO 3x4
+      // 2. FOTO 3x4 DO SERVIDOR
       // ==========================================
-      doc.setDrawColor(150, 150, 150);
-      doc.setFillColor(245, 245, 245);
-      doc.rect(165, 12, 30, 40, 'FD'); // X, Y, Largura, Altura
-      doc.setFont("helvetica", "italic");
-      doc.setFontSize(9);
-      doc.setTextColor(150, 150, 150);
-      doc.text("FOTO 3x4", 172, 33);
+      if (fotoServidorBase64) {
+        // Se escolheu foto, imprime a imagem no local exato
+        doc.addImage(fotoServidorBase64, 165, 12, 30, 40);
+        doc.setDrawColor(150, 150, 150);
+        doc.rect(165, 12, 30, 40); // Borda em volta da foto
+      } else {
+        // Se não escolheu, imprime o quadro vazio
+        doc.setDrawColor(150, 150, 150);
+        doc.setFillColor(245, 245, 245);
+        doc.rect(165, 12, 30, 40, 'FD');
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(9);
+        doc.setTextColor(150, 150, 150);
+        doc.text("FOTO 3x4", 172, 33);
+      }
 
       let currentY = 55;
-
-      // ==========================================
-      // COR PADRÃO UNIFICADA DOS RELATÓRIOS (Azul Escuro Oficial)
-      // ==========================================
       const corCabecalhoTabela: [number, number, number] = [0, 51, 160];
 
       // ==========================================
@@ -161,8 +187,6 @@ export default function BotaoImprimirFicha({ servidor, pessoal, ferias }: Props)
             [`Motivo do Desligamento: ${servidor.motivoDesligamento || "Não informado"}`]
           ],
           theme: 'grid',
-          // O Desligamento eu mantenho em um tom de vermelho/cinza escuro ou sigo o padrão? 
-          // Vamos manter a padronização oficial.
           headStyles: { fillColor: corCabecalhoTabela, textColor: [255, 255, 255], fontStyle: 'bold' },
           styles: { fontSize: 9, cellPadding: 3, textColor: [50, 50, 50] }
         });
@@ -195,16 +219,35 @@ export default function BotaoImprimirFicha({ servidor, pessoal, ferias }: Props)
   };
 
   return (
-    <button 
-      onClick={gerarFichaPDF}
-      disabled={gerando}
-      className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm"
-    >
-      {gerando ? (
-        <><Loader2 size={18} className="animate-spin" /> Gerando Ficha...</>
-      ) : (
-        <><Printer size={18} /> Imprimir Ficha 3x4</>
-      )}
-    </button>
+    <div className="flex gap-2">
+      {/* INPUT INVISÍVEL PARA SELECIONAR A FOTO DO COMPUTADOR */}
+      <input 
+        type="file" 
+        accept="image/*" 
+        className="hidden" 
+        ref={inputFotoRef} 
+        onChange={handleGerarComFoto} 
+      />
+
+      <button 
+        onClick={() => gerarFichaPDF(null)}
+        disabled={gerando}
+        className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2.5 rounded-lg text-sm font-bold shadow-sm transition-colors flex items-center gap-2"
+        title="Imprimir com o quadro de foto em branco"
+      >
+        {gerando ? <Loader2 size={18} className="animate-spin" /> : <Printer size={18} />}
+        Imprimir Ficha
+      </button>
+
+      <button 
+        onClick={() => inputFotoRef.current?.click()}
+        disabled={gerando}
+        className="bg-slate-800 hover:bg-slate-900 disabled:bg-slate-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold shadow-sm transition-colors flex items-center gap-2"
+        title="Selecionar foto do servidor no seu computador e imprimir"
+      >
+        <ImageIcon size={18} />
+        Com Foto
+      </button>
+    </div>
   );
 }

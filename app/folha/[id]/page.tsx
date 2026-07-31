@@ -61,7 +61,7 @@ export default async function FolhaServidorPage({
               <input type="hidden" name="mesAno" value={mesAno} />
               
               <div className="bg-orange-50 text-orange-800 text-sm p-4 rounded-lg border border-orange-100 mb-6">
-                <strong>Automação:</strong> O sistema verificará a data de admissão ({srv.dataAdmissao?.split('-').reverse().join('/')}) e calculará as férias <strong>Integrais</strong> (se >12 meses) ou <strong>Proporcionais em Avos</strong>, inserindo também o 1/3 Constitucional.
+                <strong>Automação:</strong> O sistema verificará a data de admissão ({srv.dataAdmissao?.split('-').reverse().join('/')}) e calculará as férias <strong>Integrais</strong> (se &gt;12 meses) ou <strong>Proporcionais em Avos</strong>, inserindo também o 1/3 Constitucional.
               </div>
               
               <div>
@@ -150,7 +150,6 @@ export default async function FolhaServidorPage({
         </div>
         
         <div className="flex items-center gap-2">
-          {/* BOTÕES INTELIGENTES */}
           <Link href={`/folha/${servidorId}?mesAno=${mesAno}&modal=ferias`} scroll={false} className="flex items-center gap-2 bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors">
             <Sun size={16} /> Gerar Férias
           </Link>

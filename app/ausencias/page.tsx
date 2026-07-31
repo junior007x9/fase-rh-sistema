@@ -32,7 +32,7 @@ export default async function AusenciasPage({ searchParams }: { searchParams: Pr
       })
       .from(eventosAusencia)
       .leftJoin(dadosPessoais, eq(eventosAusencia.servidorId, dadosPessoais.servidorId))
-      .orderBy(desc(eventosAusencia.inicio)); // Ordenação cronológica pela data de início
+      .orderBy(desc(eventosAusencia.dataInicio)); // Ordenação cronológica pela data de início
 
     const idEdicao = resolvedSearchParams?.editar;
     if (idEdicao) {

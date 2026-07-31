@@ -2,7 +2,7 @@
 import { db } from "../../../db/index";
 import { 
   servidores, dadosPessoais, documentos, enderecos, dadosBancarios, 
-  dependentesPensionistas, historicoTransferencias, lotacoes 
+  dependentesPensionistas, historicoTransferencias, lotacoes, periodosAquisitivos 
 } from "../../../db/schema";
 import { eq, desc } from "drizzle-orm";
 import Link from "next/link";
@@ -11,6 +11,7 @@ import {
   Pencil, X, Briefcase, DollarSign, ArrowRightLeft, History
 } from "lucide-react";
 import BotaoExcluir from "../../components/BotaoExcluir";
+import BotaoImprimirFicha from "../../components/BotaoImprimirFicha";
 import { salvarEndereco, atualizarEndereco, excluirEndereco, salvarContaBancaria, atualizarContaBancaria, excluirContaBancaria } from "../../actions/anexos";
 import { salvarDependente, atualizarDependente, excluirDependente, registrarDesligamento, atualizarDesligamento, excluirDesligamento } from "../../actions/complementos";
 import { registrarTransferencia } from "../../actions/folha";
@@ -65,6 +66,11 @@ export default async function PerfilServidorPage({
     .from(historicoTransferencias)
     .where(eq(historicoTransferencias.servidorId, servidorId))
     .orderBy(desc(historicoTransferencias.dataOcorrencia));
+
+  // NOVO: Busca o Histórico de Férias para compor a Ficha PDF
+  const ferias = await db.select()
+    .from(periodosAquisitivos)
+    .where(eq(periodosAquisitivos.servidorId, servidorId));
 
   if (!servidorBase || !pessoal) {
     return <div className="p-8 text-center text-red-500 font-bold">Servidor não encontrado.</div>;
@@ -160,7 +166,11 @@ export default async function PerfilServidorPage({
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        
+        <div className="flex flex-wrap gap-2">
+          {/* BOTÃO DE IMPRIMIR A FICHA OFICIAL */}
+          <BotaoImprimirFicha servidor={servidorBase} pessoal={pessoal} ferias={ferias} />
+
           {/* BOTÃO QUE ABRE O MODAL DE TRANSFERÊNCIA */}
           <Link 
             href={`/servidores/${servidorId}?novaTransferencia=true`} 

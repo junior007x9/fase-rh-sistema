@@ -2,9 +2,9 @@
 import { db } from "../../../db/index";
 import { 
   servidores, dadosPessoais, documentos, enderecos, dadosBancarios, 
-  dependentesPensionistas, historicoTransferencias, lotacoes, periodosAquisitivos 
+  dependentesPensionistas, historicoTransferencias, lotacoes, periodosAquisitivos, lancamentosFolha 
 } from "../../../db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import Link from "next/link";
 import { 
   ArrowLeft, MapPin, Landmark, Users, FileWarning, Clock, ShieldAlert, 
@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import BotaoExcluir from "../../components/BotaoExcluir";
 import BotaoImprimirFicha from "../../components/BotaoImprimirFicha";
+import BotaoDeclaracaoVinculo from "../../components/BotaoDeclaracaoVinculo";
+import BotaoTermoDesligamento from "../../components/BotaoTermoDesligamento";
 import { salvarEndereco, atualizarEndereco, excluirEndereco, salvarContaBancaria, atualizarContaBancaria, excluirContaBancaria } from "../../actions/anexos";
 import { salvarDependente, atualizarDependente, excluirDependente, registrarDesligamento, atualizarDesligamento, excluirDesligamento } from "../../actions/complementos";
 import { registrarTransferencia } from "../../actions/folha";
@@ -67,10 +69,20 @@ export default async function PerfilServidorPage({
     .where(eq(historicoTransferencias.servidorId, servidorId))
     .orderBy(desc(historicoTransferencias.dataOcorrencia));
 
-  // NOVO: Busca o Histórico de Férias para compor a Ficha PDF
+  // Busca dados de Férias e Rescisão para os relatórios
   const ferias = await db.select()
     .from(periodosAquisitivos)
     .where(eq(periodosAquisitivos.servidorId, servidorId));
+
+  let folhaRescisao: any[] = [];
+  if (servidorBase && servidorBase.status === 'DESLIGADO' && servidorBase.dataDesligamento) {
+    const parts = servidorBase.dataDesligamento.split('-');
+    if (parts.length === 3) {
+      const [ano, mes] = parts;
+      folhaRescisao = await db.select().from(lancamentosFolha)
+        .where(and(eq(lancamentosFolha.servidorId, servidorId), eq(lancamentosFolha.mesAno, `${mes}-${ano}`)));
+    }
+  }
 
   if (!servidorBase || !pessoal) {
     return <div className="p-8 text-center text-red-500 font-bold">Servidor não encontrado.</div>;
@@ -167,23 +179,27 @@ export default async function PerfilServidorPage({
           </div>
         </div>
         
-        <div className="flex flex-wrap gap-2">
-          {/* BOTÃO DE IMPRIMIR A FICHA OFICIAL */}
+        <div className="flex flex-wrap gap-2 items-center">
+          {/* BOTÕES DE RELATÓRIO E AÇÕES */}
           <BotaoImprimirFicha servidor={servidorBase} pessoal={pessoal} ferias={ferias} />
+          <BotaoDeclaracaoVinculo servidor={servidorBase} pessoal={pessoal} historico={historicoMovimentacoes} />
+          
+          {servidorBase.status === 'DESLIGADO' && (
+            <BotaoTermoDesligamento servidor={servidorBase} pessoal={pessoal} folhaRescisao={folhaRescisao} />
+          )}
 
-          {/* BOTÃO QUE ABRE O MODAL DE TRANSFERÊNCIA */}
           <Link 
             href={`/servidores/${servidorId}?novaTransferencia=true`} 
             scroll={false}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm flex items-center gap-2"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm flex items-center gap-2"
           >
-            <ArrowRightLeft size={16} /> Transferir Lotação
+            <ArrowRightLeft size={16} /> Transferir
           </Link>
           <Link 
             href={`/servidores/${servidorId}/ausencias`} 
-            className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm"
+            className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm"
           >
-            Gerenciar Férias
+            Férias
           </Link>
         </div>
       </header>
@@ -233,7 +249,7 @@ export default async function PerfilServidorPage({
             </div>
           </section>
 
-          {/* HISTÓRICO DE TRANSFERÊNCIAS (APENAS A LISTA AGORA) */}
+          {/* HISTÓRICO DE TRANSFERÊNCIAS */}
           <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
             <div className="flex items-center gap-2 border-b pb-4 mb-4">
               <History className="text-blue-600" />

@@ -1,9 +1,10 @@
 // Arquivo: app/components/BotaoImprimirContracheque.tsx
 "use client";
 
+import { useState } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { Download } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 
 type Props = {
   servidor: { nome: string; matricula: string | null; cargo: string | null; lotacao: string | null };
@@ -14,142 +15,232 @@ type Props = {
 };
 
 export default function BotaoImprimirContracheque({ servidor, mesAno, salarioBase, lancamentos, totais }: Props) {
-  
+  const [gerando, setGerando] = useState(false);
+
   const formatarMoeda = (valor: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
   };
 
-  const gerarPDF = () => {
-    const doc = new jsPDF();
+  // Função para carregar a logo para o PDF
+  const obterBase64DaImagem = async (url: string): Promise<string | null> => {
+    try {
+      const resposta = await fetch(url);
+      if (!resposta.ok) return null;
+      const blob = await resposta.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return null;
+    }
+  };
+
+  const gerarPDF = async () => {
+    setGerando(true);
     
-    // Cores oficiais
-    const corAzul = [0, 51, 160];
-    const corPreta = [0, 0, 0];
-    const corVerde = [21, 128, 61]; 
-    const corVermelha = [185, 28, 28]; 
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const logoBase64 = await obterBase64DaImagem('/logo.jpg');
 
-    // 1. Cabeçalho Institucional
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.setTextColor(corAzul[0], corAzul[1], corAzul[2]);
-    doc.text("FASE/MA - RECURSOS HUMANOS", 14, 20);
-    
-    doc.setFontSize(11);
-    doc.setTextColor(corPreta[0], corPreta[1], corPreta[2]);
-    doc.text("Recibo de Pagamento de Salário", 14, 26);
-    
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text(`Competência: ${mesAno.replace('-', '/')}`, 155, 26);
+      const corAzul = [0, 51, 160] as [number, number, number];
+      const corVermelha = [218, 41, 28] as [number, number, number];
+      const corAmarela = [242, 169, 0] as [number, number, number];
+      const corVerde = [21, 128, 61] as [number, number, number];
+      const corPreta = [0, 0, 0] as [number, number, number];
 
-    // 2. Quadro de Dados do Servidor
-    doc.setDrawColor(200, 200, 200);
-    doc.setFillColor(248, 250, 252);
-    doc.rect(14, 32, 182, 22, 'FD'); // FD = Fill and Draw (Fundo cinza claro e borda)
-    
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    doc.text("Matrícula:", 18, 40);
-    doc.setFont("helvetica", "normal");
-    doc.text(servidor.matricula || "N/A", 36, 40);
+      // ========================================================
+      // FUNÇÃO PARA DESENHAR 1 VIA DO CONTRACHEQUE
+      // ========================================================
+      const desenharVia = (offsetY: number, tituloVia: string) => {
+        // 1. Barra de Cores Oficial (Topo)
+        doc.setFillColor(corVermelha[0], corVermelha[1], corVermelha[2]);
+        doc.rect(0, offsetY, pageWidth / 3, 3, 'F');
+        doc.setFillColor(corAmarela[0], corAmarela[1], corAmarela[2]);
+        doc.rect(pageWidth / 3, offsetY, pageWidth / 3, 3, 'F');
+        doc.setFillColor(corAzul[0], corAzul[1], corAzul[2]);
+        doc.rect((pageWidth / 3) * 2, offsetY, pageWidth / 3, 3, 'F');
 
-    doc.setFont("helvetica", "bold");
-    doc.text("Nome:", 18, 48);
-    doc.setFont("helvetica", "normal");
-    doc.text(servidor.nome, 30, 48);
+        // 2. Logo e Cabeçalho
+        let margemTexto = 14;
+        if (logoBase64) {
+          doc.addImage(logoBase64, 'JPEG', 14, offsetY + 6, 22, 22);
+          margemTexto = 40;
+        }
 
-    doc.setFont("helvetica", "bold");
-    doc.text("Cargo:", 100, 40);
-    doc.setFont("helvetica", "normal");
-    doc.text(servidor.cargo || "-", 112, 40);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.setTextColor(corPreta[0], corPreta[1], corPreta[2]);
+        doc.text("FASE/MA - RECURSOS HUMANOS", margemTexto, offsetY + 12);
+        
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(100, 100, 100);
+        doc.text("FUNDAÇÃO DE ATENDIMENTO SOCIOEDUCATIVO DO MARANHÃO", margemTexto, offsetY + 17);
 
-    doc.setFont("helvetica", "bold");
-    doc.text("Lotação:", 100, 48);
-    doc.setFont("helvetica", "normal");
-    doc.text(servidor.lotacao || "-", 115, 48);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(corAzul[0], corAzul[1], corAzul[2]);
+        doc.text("RECIBO DE PAGAMENTO DE SALÁRIO", margemTexto, offsetY + 24);
 
-    // 3. Montando a Tabela de Eventos
-    const linhas = [
-      ["001", "Salário Base", "30d", formatarMoeda(salarioBase), "-"]
-    ];
+        // Competência e Via
+        doc.setFontSize(9);
+        doc.setTextColor(corPreta[0], corPreta[1], corPreta[2]);
+        doc.text(`Competência: ${mesAno.replace('-', '/')}`, 160, offsetY + 12);
+        doc.setFont("helvetica", "italic");
+        doc.setTextColor(150, 150, 150);
+        doc.text(tituloVia, 160, offsetY + 17);
 
-    lancamentos.forEach(lan => {
-      linhas.push([
-        lan.codigoEvento,
-        lan.descricaoEvento,
-        lan.quantidadeReferencia ? String(lan.quantidadeReferencia) : "-",
-        lan.tipo === "PROVENTO" ? formatarMoeda(lan.valorFinal) : "-",
-        lan.tipo === "DESCONTO" ? formatarMoeda(lan.valorFinal) : "-"
-      ]);
-    });
+        // 3. Quadro de Dados do Servidor (Organizado e sem corte)
+        doc.setDrawColor(200, 200, 200);
+        doc.setFillColor(248, 250, 252); // Fundo cinza bem claro
+        doc.rect(14, offsetY + 30, 182, 28, 'FD'); 
+        
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(corPreta[0], corPreta[1], corPreta[2]);
+        
+        // Linha 1: Matrícula e Cargo
+        doc.text(`Matrícula:`, 18, offsetY + 36);
+        doc.setFont("helvetica", "normal");
+        doc.text(`${servidor.matricula || "N/A"}`, 35, offsetY + 36);
+        
+        doc.setFont("helvetica", "bold");
+        doc.text(`Cargo / Função:`, 90, offsetY + 36);
+        doc.setFont("helvetica", "normal");
+        doc.text(`${servidor.cargo || "-"}`, 118, offsetY + 36, { maxWidth: 75 });
 
-    autoTable(doc, {
-      startY: 58,
-      head: [["Cód.", "Descrição", "Ref.", "Proventos", "Descontos"]],
-      body: linhas,
-      theme: 'grid',
-      headStyles: { fillColor: [240, 240, 240], textColor: [50, 50, 50], fontStyle: 'bold' },
-      columnStyles: {
-        0: { halign: 'center', cellWidth: 20 },
-        2: { halign: 'center', cellWidth: 20 },
-        3: { halign: 'right', cellWidth: 35 },
-        4: { halign: 'right', cellWidth: 35 },
-      },
-      styles: { fontSize: 9, cellPadding: 3 }
-    });
+        // Linha 2: Nome Completo (Ocupa a linha toda)
+        doc.setFont("helvetica", "bold");
+        doc.text(`Nome:`, 18, offsetY + 44);
+        doc.setFont("helvetica", "normal");
+        doc.text(`${servidor.nome}`, 30, offsetY + 44, { maxWidth: 160 });
 
-    // Pega a posição Y (vertical) onde a tabela terminou
-    const finalY = (doc as any).lastAutoTable.finalY + 6;
+        // Linha 3: Lotação (Ocupa a linha toda)
+        doc.setFont("helvetica", "bold");
+        doc.text(`Lotação:`, 18, offsetY + 52);
+        doc.setFont("helvetica", "normal");
+        // O parâmetro maxWidth quebra o texto automaticamente para a linha de baixo se for muito gigante
+        doc.text(`${servidor.lotacao || "-"}`, 33, offsetY + 52, { maxWidth: 160 });
 
-    // 4. Quadro de Totais
-    doc.setFillColor(248, 250, 252);
-    doc.rect(14, finalY, 182, 25, 'FD');
-    
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    doc.text("Total de Proventos:", 18, finalY + 8);
-    doc.setTextColor(corVerde[0], corVerde[1], corVerde[2]);
-    doc.text(formatarMoeda(totais.proventos), 55, finalY + 8);
+        // 4. Montando a Tabela de Eventos
+        const linhas = [
+          ["001", "Salário Base", "30d", formatarMoeda(salarioBase), "-"]
+        ];
 
-    doc.setTextColor(corPreta[0], corPreta[1], corPreta[2]);
-    doc.text("Total de Descontos:", 95, finalY + 8);
-    doc.setTextColor(corVermelha[0], corVermelha[1], corVermelha[2]);
-    doc.text(formatarMoeda(totais.descontos), 132, finalY + 8);
+        lancamentos.forEach(lan => {
+          linhas.push([
+            lan.codigoEvento,
+            lan.descricaoEvento,
+            lan.quantidadeReferencia ? String(lan.quantidadeReferencia) : "-",
+            lan.tipo === "PROVENTO" ? formatarMoeda(lan.valorFinal) : "-",
+            lan.tipo === "DESCONTO" ? formatarMoeda(lan.valorFinal) : "-"
+          ]);
+        });
 
-    // Destaque Líquido
-    doc.setFillColor(220, 252, 231); // Verde muito claro
-    doc.rect(150, finalY, 46, 25, 'F');
-    doc.setTextColor(corPreta[0], corPreta[1], corPreta[2]);
-    doc.setFontSize(10);
-    doc.text("Líquido a Receber", 154, finalY + 8);
-    doc.setFontSize(12);
-    doc.setTextColor(corVerde[0], corVerde[1], corVerde[2]);
-    doc.text(formatarMoeda(totais.liquido), 154, finalY + 18);
+        autoTable(doc, {
+          startY: offsetY + 62,
+          head: [["Cód.", "Descrição", "Ref.", "Proventos", "Descontos"]],
+          body: linhas,
+          theme: 'grid',
+          headStyles: { fillColor: [240, 240, 240], textColor: [50, 50, 50], fontStyle: 'bold' },
+          columnStyles: {
+            0: { halign: 'center', cellWidth: 15 },
+            2: { halign: 'center', cellWidth: 15 },
+            3: { halign: 'right', cellWidth: 35 },
+            4: { halign: 'right', cellWidth: 35 },
+          },
+          styles: { fontSize: 8, cellPadding: 2, textColor: [30, 30, 30] },
+          alternateRowStyles: { fillColor: [252, 252, 252] },
+          margin: { left: 14, right: 14 }
+        });
 
-    // 5. Linha de Assinatura
-    doc.setTextColor(corPreta[0], corPreta[1], corPreta[2]);
-    doc.setDrawColor(0, 0, 0);
-    doc.line(60, finalY + 60, 150, finalY + 60);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.text("Assinatura do Servidor", 105, finalY + 66, { align: "center" });
-    
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(100, 100, 100);
-    doc.text("Reconheço a exatidão e o recebimento dos valores acima descritos.", 105, finalY + 71, { align: "center" });
+        const finalY = (doc as any).lastAutoTable.finalY + 4;
 
-    // 6. Salvar Documento
-    const nomeArquivo = `Contracheque_${servidor.nome.split(' ')[0]}_${mesAno}.pdf`;
-    doc.save(nomeArquivo);
+        // 5. Quadro de Totais
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(200, 200, 200);
+        doc.rect(14, finalY, 182, 18, 'FD');
+        
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold");
+        doc.text("Total de Proventos:", 18, finalY + 7);
+        doc.setTextColor(corVerde[0], corVerde[1], corVerde[2]);
+        doc.text(formatarMoeda(totais.proventos), 50, finalY + 7);
+
+        doc.setTextColor(corPreta[0], corPreta[1], corPreta[2]);
+        doc.text("Total de Descontos:", 85, finalY + 7);
+        doc.setTextColor(corVermelha[0], corVermelha[1], corVermelha[2]);
+        doc.text(formatarMoeda(totais.descontos), 118, finalY + 7);
+
+        // Destaque Líquido (Fundo verde à direita)
+        doc.setFillColor(220, 252, 231); 
+        doc.rect(152, finalY, 44, 18, 'F');
+        doc.setTextColor(corPreta[0], corPreta[1], corPreta[2]);
+        doc.setFontSize(8);
+        doc.text("Líquido a Receber", 155, finalY + 6);
+        doc.setFontSize(11);
+        doc.setTextColor(corVerde[0], corVerde[1], corVerde[2]);
+        doc.text(formatarMoeda(totais.liquido), 155, finalY + 13);
+
+        // 6. Linha de Assinatura
+        doc.setTextColor(corPreta[0], corPreta[1], corPreta[2]);
+        doc.setDrawColor(150, 150, 150);
+        doc.line(60, finalY + 38, 150, finalY + 38);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.text("Assinatura do Servidor", 105, finalY + 43, { align: "center" });
+        
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(150, 150, 150);
+        doc.text("Reconheço a exatidão e o recebimento dos valores acima descritos.", 105, finalY + 47, { align: "center" });
+      };
+
+      // ========================================================
+      // GERAÇÃO DAS DUAS VIAS NA MESMA PÁGINA
+      // ========================================================
+      
+      // 1ª VIA (Y = 0)
+      desenharVia(0, "1ª Via - Recursos Humanos");
+
+      // LINHA DE CORTE TRACEJADA (Meio da página - Y = 148)
+      doc.setDrawColor(180, 180, 180);
+      doc.setLineDash([2, 2], 0);
+      doc.line(14, 148, 196, 148);
+      doc.setLineDash([], 0); // Reseta o tracejado
+      doc.setFontSize(7);
+      doc.setTextColor(180, 180, 180);
+      doc.text("✄ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -", 105, 147, { align: "center" });
+
+      // 2ª VIA (Y = 153)
+      desenharVia(153, "2ª Via - Servidor");
+
+      // Salvar Documento
+      const nomeArquivo = `Contracheque_${servidor.nome.split(' ')[0]}_${mesAno}.pdf`;
+      doc.save(nomeArquivo);
+      
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+      alert("Ocorreu um erro ao gerar o contracheque. Tente novamente.");
+    } finally {
+      setGerando(false);
+    }
   };
 
   return (
     <button 
       onClick={gerarPDF}
-      className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm"
+      disabled={gerando}
+      className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-500 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm"
     >
-      <Download size={18} /> Baixar Contracheque PDF
+      {gerando ? (
+        <><Loader2 size={18} className="animate-spin" /> Gerando PDF...</>
+      ) : (
+        <><Download size={18} /> Baixar Contracheque Oficial</>
+      )}
     </button>
   );
 }

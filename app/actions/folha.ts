@@ -9,7 +9,7 @@ import { redirect } from "next/navigation";
 import { getSessaoUsuario } from "./auth";
 import { eq } from "drizzle-orm";
 import { registrarLogAuditoria } from "./auditoria";
-import { EVENTOS_FOLHA, calcularDescontoFalta } from "../utils/calculosFolha";
+import { EVENTOS_FOLHA, calcularDescontoFalta, calcularDecimoTerceiro } from "../utils/calculosFolha";
 
 // =========================================
 // 1. REGISTRAR TRANSFERÊNCIA (Já existia)

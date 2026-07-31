@@ -1,7 +1,6 @@
 // Arquivo: db/schema.ts
 import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { pgTable, text, uuid, date, boolean, decimal, integer, timestamp } from "drizzle-orm/pg-core";
 
 // 1. Cargos e Lotações
 export const cargos = sqliteTable('cargos', {
@@ -125,17 +124,17 @@ export const periodosAquisitivos = sqliteTable('periodos_aquisitivos', {
 });
 
 // 11. Eventos de Ausência
-export const eventosAusencia = sqliteTable('eventos_ausencia', {
-  id: text('id').primaryKey(),
-  servidorId: text('servidor_id').notNull().references(() => servidores.id, { onDelete: 'cascade' }),
-  periodoAquisitivoId: text('periodo_aquisitivo_id').references(() => periodosAquisitivos.id),
-  tipoAusencia: text('tipo_ausencia', { enum: ['FERIAS', 'LICENCA_MATERNIDADE', 'SAUDE', 'LICENCA_PREMIO', 'AFASTAMENTO_SUPERIOR_15'] }).notNull(),
-  dataInicio: text('data_inicio').notNull(),
-  dataFim: text('data_fim').notNull(),
-  dias: integer("dias"), // <--- NOVO
-  cid: text("cid"),      // <--- NOVO
-  observacao: text('observacao'),
-  criadoEm: text('criado_em').default(sql`CURRENT_TIMESTAMP`),
+export const eventosAusencia = sqliteTable("eventos_ausencia", {
+  id: text("id").primaryKey(), // No SQLite, UUIDs são salvos como text
+  servidorId: text("servidor_id").references(() => servidores.id),
+  tipoAusencia: text("tipo_ausencia").notNull(),
+  dataInicio: text("data_inicio").notNull(),
+  dataFim: text("data_fim").notNull(),
+  dias: integer("dias"), // <--- NOSSO CAMPO NOVO
+  cid: text("cid"),      // <--- NOSSO CAMPO NOVO
+  observacao: text("observacao"),
+  periodoAquisitivoId: text("periodo_aquisitivo_id"),
+  criadoEm: integer("criado_em", { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
 });
 
 // 12. Recrutamento (Agora limpo e com segurança)

@@ -21,7 +21,6 @@ export default function BotaoImprimirContracheque({ servidor, mesAno, salarioBas
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
   };
 
-  // Função para carregar a logo para o PDF
   const obterBase64DaImagem = async (url: string): Promise<string | null> => {
     try {
       const resposta = await fetch(url);
@@ -51,11 +50,7 @@ export default function BotaoImprimirContracheque({ servidor, mesAno, salarioBas
       const corVerde = [21, 128, 61] as [number, number, number];
       const corPreta = [0, 0, 0] as [number, number, number];
 
-      // ========================================================
-      // FUNÇÃO PARA DESENHAR 1 VIA DO CONTRACHEQUE
-      // ========================================================
       const desenharVia = (offsetY: number, tituloVia: string) => {
-        // 1. Barra de Cores Oficial (Topo)
         doc.setFillColor(corVermelha[0], corVermelha[1], corVermelha[2]);
         doc.rect(0, offsetY, pageWidth / 3, 3, 'F');
         doc.setFillColor(corAmarela[0], corAmarela[1], corAmarela[2]);
@@ -63,7 +58,6 @@ export default function BotaoImprimirContracheque({ servidor, mesAno, salarioBas
         doc.setFillColor(corAzul[0], corAzul[1], corAzul[2]);
         doc.rect((pageWidth / 3) * 2, offsetY, pageWidth / 3, 3, 'F');
 
-        // 2. Logo e Cabeçalho
         let margemTexto = 14;
         if (logoBase64) {
           doc.addImage(logoBase64, 'JPEG', 14, offsetY + 6, 22, 22);
@@ -85,7 +79,6 @@ export default function BotaoImprimirContracheque({ servidor, mesAno, salarioBas
         doc.setTextColor(corAzul[0], corAzul[1], corAzul[2]);
         doc.text("RECIBO DE PAGAMENTO DE SALÁRIO", margemTexto, offsetY + 24);
 
-        // Competência e Via
         doc.setFontSize(9);
         doc.setTextColor(corPreta[0], corPreta[1], corPreta[2]);
         doc.text(`Competência: ${mesAno.replace('-', '/')}`, 160, offsetY + 12);
@@ -93,16 +86,14 @@ export default function BotaoImprimirContracheque({ servidor, mesAno, salarioBas
         doc.setTextColor(150, 150, 150);
         doc.text(tituloVia, 160, offsetY + 17);
 
-        // 3. Quadro de Dados do Servidor (Organizado e sem corte)
         doc.setDrawColor(200, 200, 200);
-        doc.setFillColor(248, 250, 252); // Fundo cinza bem claro
+        doc.setFillColor(248, 250, 252);
         doc.rect(14, offsetY + 30, 182, 28, 'FD'); 
         
         doc.setFontSize(9);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(corPreta[0], corPreta[1], corPreta[2]);
         
-        // Linha 1: Matrícula e Cargo
         doc.text(`Matrícula:`, 18, offsetY + 36);
         doc.setFont("helvetica", "normal");
         doc.text(`${servidor.matricula || "N/A"}`, 35, offsetY + 36);
@@ -112,20 +103,16 @@ export default function BotaoImprimirContracheque({ servidor, mesAno, salarioBas
         doc.setFont("helvetica", "normal");
         doc.text(`${servidor.cargo || "-"}`, 118, offsetY + 36, { maxWidth: 75 });
 
-        // Linha 2: Nome Completo (Ocupa a linha toda)
         doc.setFont("helvetica", "bold");
         doc.text(`Nome:`, 18, offsetY + 44);
         doc.setFont("helvetica", "normal");
         doc.text(`${servidor.nome}`, 30, offsetY + 44, { maxWidth: 160 });
 
-        // Linha 3: Lotação (Ocupa a linha toda)
         doc.setFont("helvetica", "bold");
         doc.text(`Lotação:`, 18, offsetY + 52);
         doc.setFont("helvetica", "normal");
-        // O parâmetro maxWidth quebra o texto automaticamente para a linha de baixo se for muito gigante
         doc.text(`${servidor.lotacao || "-"}`, 33, offsetY + 52, { maxWidth: 160 });
 
-        // 4. Montando a Tabela de Eventos
         const linhas = [
           ["001", "Salário Base", "30d", formatarMoeda(salarioBase), "-"]
         ];
@@ -159,7 +146,6 @@ export default function BotaoImprimirContracheque({ servidor, mesAno, salarioBas
 
         const finalY = (doc as any).lastAutoTable.finalY + 4;
 
-        // 5. Quadro de Totais
         doc.setFillColor(248, 250, 252);
         doc.setDrawColor(200, 200, 200);
         doc.rect(14, finalY, 182, 18, 'FD');
@@ -175,7 +161,6 @@ export default function BotaoImprimirContracheque({ servidor, mesAno, salarioBas
         doc.setTextColor(corVermelha[0], corVermelha[1], corVermelha[2]);
         doc.text(formatarMoeda(totais.descontos), 118, finalY + 7);
 
-        // Destaque Líquido (Fundo verde à direita)
         doc.setFillColor(220, 252, 231); 
         doc.rect(152, finalY, 44, 18, 'F');
         doc.setTextColor(corPreta[0], corPreta[1], corPreta[2]);
@@ -185,7 +170,6 @@ export default function BotaoImprimirContracheque({ servidor, mesAno, salarioBas
         doc.setTextColor(corVerde[0], corVerde[1], corVerde[2]);
         doc.text(formatarMoeda(totais.liquido), 155, finalY + 13);
 
-        // 6. Linha de Assinatura
         doc.setTextColor(corPreta[0], corPreta[1], corPreta[2]);
         doc.setDrawColor(150, 150, 150);
         doc.line(60, finalY + 38, 150, finalY + 38);
@@ -199,26 +183,20 @@ export default function BotaoImprimirContracheque({ servidor, mesAno, salarioBas
         doc.text("Reconheço a exatidão e o recebimento dos valores acima descritos.", 105, finalY + 47, { align: "center" });
       };
 
-      // ========================================================
-      // GERAÇÃO DAS DUAS VIAS NA MESMA PÁGINA
-      // ========================================================
-      
-      // 1ª VIA (Y = 0)
       desenharVia(0, "1ª Via - Recursos Humanos");
 
-      // LINHA DE CORTE TRACEJADA (Meio da página - Y = 148)
+      // CORREÇÃO DO TYPESCRIPT AQUI! (Usando "as any")
       doc.setDrawColor(180, 180, 180);
-      doc.setLineDash([2, 2], 0);
+      (doc as any).setLineDash([2, 2], 0);
       doc.line(14, 148, 196, 148);
-      doc.setLineDash([], 0); // Reseta o tracejado
+      (doc as any).setLineDash([], 0); 
+      
       doc.setFontSize(7);
       doc.setTextColor(180, 180, 180);
       doc.text("✄ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -", 105, 147, { align: "center" });
 
-      // 2ª VIA (Y = 153)
       desenharVia(153, "2ª Via - Servidor");
 
-      // Salvar Documento
       const nomeArquivo = `Contracheque_${servidor.nome.split(' ')[0]}_${mesAno}.pdf`;
       doc.save(nomeArquivo);
       

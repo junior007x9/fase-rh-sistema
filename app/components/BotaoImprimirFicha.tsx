@@ -21,23 +21,53 @@ export default function BotaoImprimirFicha({ servidor, pessoal, ferias }: Props)
     try {
       const doc = new jsPDF();
       
-      // 1. CABEÇALHO DA FASE/MA
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(16);
-      doc.setTextColor(0, 51, 160); // Azul
-      doc.text("FASE/MA - RECURSOS HUMANOS", 14, 20);
-      
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100);
-      doc.text("FUNDAÇÃO DE ATENDIMENTO SOCIOEDUCATIVO DO MARANHÃO", 14, 26);
-      
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(14);
-      doc.setTextColor(0, 0, 0);
-      doc.text("FICHA DE REGISTRO DE EMPREGADO", 14, 36);
+      // ==========================================
+      // 1. CABEÇALHO E LOGOMARCA OFICIAL
+      // ==========================================
+      try {
+        const img = new Image();
+        img.src = "/logo.png"; // Caminho da logo oficial na pasta public
+        
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+        });
+        
+        // Inserir Logo: X, Y, Largura, Altura
+        doc.addImage(img, "PNG", 14, 10, 35, 18);
+        
+        // Textos deslocados para a direita para dar espaço à logo
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.setTextColor(0, 51, 160); // Azul Escuro Institucional
+        doc.text("FASE/MA - RECURSOS HUMANOS", 55, 18);
+        
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(100, 100, 100);
+        doc.text("FUNDAÇÃO DE ATENDIMENTO SOCIOEDUCATIVO DO MARANHÃO", 55, 23);
+      } catch (e) {
+        // Fallback: Se a logo não for encontrada na pasta public, imprime sem ela
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.setTextColor(0, 51, 160);
+        doc.text("FASE/MA - RECURSOS HUMANOS", 14, 18);
+        
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(100, 100, 100);
+        doc.text("FUNDAÇÃO DE ATENDIMENTO SOCIOEDUCATIVO DO MARANHÃO", 14, 23);
+      }
 
-      // 2. QUADRO DA FOTO 3x4 (Proporção 30x40mm)
+      // Título do Documento
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+      doc.text("FICHA DE REGISTRO DE EMPREGADO", 14, 40);
+
+      // ==========================================
+      // 2. QUADRO DA FOTO 3x4
+      // ==========================================
       doc.setDrawColor(150, 150, 150);
       doc.setFillColor(245, 245, 245);
       doc.rect(165, 12, 30, 40, 'FD'); // X, Y, Largura, Altura
@@ -46,9 +76,16 @@ export default function BotaoImprimirFicha({ servidor, pessoal, ferias }: Props)
       doc.setTextColor(150, 150, 150);
       doc.text("FOTO 3x4", 172, 33);
 
-      let currentY = 50;
+      let currentY = 55;
 
+      // ==========================================
+      // COR PADRÃO UNIFICADA DOS RELATÓRIOS (Azul Escuro Oficial)
+      // ==========================================
+      const corCabecalhoTabela: [number, number, number] = [0, 51, 160];
+
+      // ==========================================
       // 3. DADOS DE IDENTIFICAÇÃO (PESSOAIS)
+      // ==========================================
       autoTable(doc, {
         startY: currentY,
         head: [["DADOS DE IDENTIFICAÇÃO"]],
@@ -60,13 +97,15 @@ export default function BotaoImprimirFicha({ servidor, pessoal, ferias }: Props)
           [`Telefone: ${pessoal.telefone || "Não informado"}   |   Email: ${pessoal.email || "Não informado"}`]
         ],
         theme: 'grid',
-        headStyles: { fillColor: [0, 51, 160], textColor: [255, 255, 255], fontStyle: 'bold' },
-        styles: { fontSize: 10, cellPadding: 3, textColor: [50, 50, 50] }
+        headStyles: { fillColor: corCabecalhoTabela, textColor: [255, 255, 255], fontStyle: 'bold' },
+        styles: { fontSize: 9, cellPadding: 3, textColor: [50, 50, 50] }
       });
 
       currentY = (doc as any).lastAutoTable.finalY + 10;
 
+      // ==========================================
       // 4. DADOS CONTRATUAIS E REMUNERAÇÃO
+      // ==========================================
       const remuneracaoFormatada = servidor.remuneracaoBase 
         ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(servidor.remuneracaoBase) 
         : "Não informada";
@@ -82,13 +121,15 @@ export default function BotaoImprimirFicha({ servidor, pessoal, ferias }: Props)
           [`Remuneração Base Atual: ${remuneracaoFormatada}`]
         ],
         theme: 'grid',
-        headStyles: { fillColor: [21, 128, 61], textColor: [255, 255, 255], fontStyle: 'bold' },
-        styles: { fontSize: 10, cellPadding: 3, textColor: [50, 50, 50] }
+        headStyles: { fillColor: corCabecalhoTabela, textColor: [255, 255, 255], fontStyle: 'bold' },
+        styles: { fontSize: 9, cellPadding: 3, textColor: [50, 50, 50] }
       });
 
       currentY = (doc as any).lastAutoTable.finalY + 10;
 
+      // ==========================================
       // 5. HISTÓRICO DE FÉRIAS
+      // ==========================================
       const feriasBody = ferias.length > 0 
         ? ferias.map(f => [
             `${f.dataInicio.split('-').reverse().join('/')} a ${f.dataFim.split('-').reverse().join('/')}`,
@@ -102,13 +143,15 @@ export default function BotaoImprimirFicha({ servidor, pessoal, ferias }: Props)
         head: [["Período Aquisitivo", "Status", "Dias Pendentes"]],
         body: feriasBody,
         theme: 'grid',
-        headStyles: { fillColor: [242, 169, 0], textColor: [255, 255, 255], fontStyle: 'bold' },
+        headStyles: { fillColor: corCabecalhoTabela, textColor: [255, 255, 255], fontStyle: 'bold' },
         styles: { fontSize: 9, cellPadding: 3, textColor: [50, 50, 50], halign: 'center' }
       });
 
       currentY = (doc as any).lastAutoTable.finalY + 10;
 
-      // 6. DADOS DE DESLIGAMENTO (SÓ APARECE SE FOR DESLIGADO)
+      // ==========================================
+      // 6. DADOS DE DESLIGAMENTO (CONDICIONAL)
+      // ==========================================
       if (servidor.status === 'DESLIGADO') {
         autoTable(doc, {
           startY: currentY,
@@ -118,12 +161,16 @@ export default function BotaoImprimirFicha({ servidor, pessoal, ferias }: Props)
             [`Motivo do Desligamento: ${servidor.motivoDesligamento || "Não informado"}`]
           ],
           theme: 'grid',
-          headStyles: { fillColor: [218, 41, 28], textColor: [255, 255, 255], fontStyle: 'bold' },
-          styles: { fontSize: 10, cellPadding: 3, textColor: [50, 50, 50] }
+          // O Desligamento eu mantenho em um tom de vermelho/cinza escuro ou sigo o padrão? 
+          // Vamos manter a padronização oficial.
+          headStyles: { fillColor: corCabecalhoTabela, textColor: [255, 255, 255], fontStyle: 'bold' },
+          styles: { fontSize: 9, cellPadding: 3, textColor: [50, 50, 50] }
         });
       }
 
+      // ==========================================
       // ASSINATURAS NO RODAPÉ
+      // ==========================================
       const finalY = (doc as any).lastAutoTable.finalY + 40;
       if (finalY < 280) {
         doc.setDrawColor(150, 150, 150);

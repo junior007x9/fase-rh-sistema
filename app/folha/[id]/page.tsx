@@ -5,6 +5,7 @@ import { eq, and } from "drizzle-orm";
 import Link from "next/link";
 import { ArrowLeft, PlusCircle, Trash2, FileText, Download } from "lucide-react";
 import { EVENTOS_FOLHA } from "../../utils/calculosFolha";
+import BotaoImprimirContracheque from "../../../components/BotaoImprimirContracheque";
 import { adicionarLancamentoFolha, excluirLancamentoFolha } from "../../actions/folha";
 
 export const dynamic = "force-dynamic";
@@ -71,6 +72,15 @@ export default async function FolhaServidorPage({
             </p>
           </div>
         </div>
+        
+        {/* NOVO BOTÃO DE IMPRESSÃO AQUI */}
+        <BotaoImprimirContracheque 
+          servidor={{ nome: pessoal.nome || "", matricula: srv.matricula, cargo: srv.cargo, lotacao: srv.lotacao }}
+          mesAno={mesAno}
+          salarioBase={salarioBase}
+          lancamentos={lancamentos}
+          totais={{ proventos: totalProventos, descontos: totalDescontos, liquido: salarioLiquido }}
+        />
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">

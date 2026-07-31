@@ -47,7 +47,6 @@ export default function BotaoDeclaracaoVinculo({ servidor, pessoal, historico }:
       // 2. TEXTO DA DECLARAÇÃO
       doc.setFont("helvetica", "normal");
       doc.setFontSize(11);
-      doc.setLineHeightFactor(1.5);
       
       const dataAdmissao = servidor.dataAdmissao?.split('-').reverse().join('/') || "___/___/_____";
       const dataDesligamento = servidor.dataDesligamento?.split('-').reverse().join('/');

@@ -5,7 +5,7 @@ import { eq, and } from "drizzle-orm";
 import Link from "next/link";
 import { ArrowLeft, PlusCircle, Trash2, FileText, Download } from "lucide-react";
 import { EVENTOS_FOLHA } from "../../utils/calculosFolha";
-import BotaoImprimirContracheque from "../../../components/BotaoImprimirContracheque";
+import BotaoImprimirContracheque from "../../components/BotaoImprimirContracheque";
 import { adicionarLancamentoFolha, excluirLancamentoFolha } from "../../actions/folha";
 
 export const dynamic = "force-dynamic";

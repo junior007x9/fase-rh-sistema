@@ -1,6 +1,7 @@
 // Arquivo: db/schema.ts
 import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
+import { pgTable, text, uuid, date, boolean, decimal, integer, timestamp } from "drizzle-orm/pg-core";
 
 // 1. Cargos e Lotações
 export const cargos = sqliteTable('cargos', {
@@ -131,6 +132,8 @@ export const eventosAusencia = sqliteTable('eventos_ausencia', {
   tipoAusencia: text('tipo_ausencia', { enum: ['FERIAS', 'LICENCA_MATERNIDADE', 'SAUDE', 'LICENCA_PREMIO', 'AFASTAMENTO_SUPERIOR_15'] }).notNull(),
   dataInicio: text('data_inicio').notNull(),
   dataFim: text('data_fim').notNull(),
+  dias: integer("dias"), // <--- NOVO
+  cid: text("cid"),      // <--- NOVO
   observacao: text('observacao'),
   criadoEm: text('criado_em').default(sql`CURRENT_TIMESTAMP`),
 });

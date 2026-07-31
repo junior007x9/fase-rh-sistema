@@ -83,11 +83,31 @@ export async function salvarEventoAusencia(formData: FormData) {
   if (!sessao) throw new Error("Acesso negado.");
 
   const servidorId = formData.get("servidorId") as string;
-  const tipoAusencia = formData.get("tipoAusencia") as string;
+  let tipoAusencia = formData.get("tipoAusencia") as string;
   const dataInicio = formData.get("dataInicio") as string;
-  const dataFim = formData.get("dataFim") as string;
   const observacao = formData.get("observacao") as string;
   const periodoAquisitivoId = formData.get("periodoAquisitivoId") as string | null;
+  const cid = formData.get("cid") as string;
+  
+  // Pegamos dias (da nova tela) e dataFim (de telas antigas, por segurança)
+  const diasStr = formData.get("dias") as string;
+  let dataFim = formData.get("dataFim") as string;
+  let dias: number | undefined = undefined;
+
+  // Se houver Qtd Dias (vindo do nosso novo form), calculamos a DataFim automaticamente
+  if (diasStr) {
+    dias = parseInt(diasStr);
+    const dataInicioObj = new Date(dataInicio);
+    const dataFimObj = new Date(dataInicioObj);
+    dataFimObj.setDate(dataFimObj.getDate() + dias - 1);
+    dataFim = dataFimObj.toISOString().split('T')[0];
+  }
+
+  // REGRA DO INSS: Se for saúde e passar de 15 dias, vira INSS automático
+  if (tipoAusencia === "SAUDE" && dias && dias > 15) {
+    tipoAusencia = "AFASTAMENTO_SUPERIOR_15";
+  }
+
   const novoId = randomUUID();
 
   await db.insert(eventosAusencia).values({
@@ -95,7 +115,9 @@ export async function salvarEventoAusencia(formData: FormData) {
     servidorId,
     tipoAusencia: tipoAusencia as any,
     dataInicio,
-    dataFim,
+    dataFim, // Inserida manualmente ou calculada acima
+    dias,
+    cid: cid ? cid.toUpperCase() : undefined,
     observacao,
     periodoAquisitivoId: periodoAquisitivoId || undefined,
   });
@@ -118,11 +140,29 @@ export async function atualizarAusencia(formData: FormData) {
 
   const id = formData.get("id") as string;
   const servidorId = formData.get("servidorId") as string;
-  const tipoAusencia = formData.get("tipoAusencia") as string;
+  let tipoAusencia = formData.get("tipoAusencia") as string;
   const dataInicio = formData.get("dataInicio") as string;
-  const dataFim = formData.get("dataFim") as string;
   const observacao = formData.get("observacao") as string;
   const periodoAquisitivoId = formData.get("periodoAquisitivoId") as string | null;
+  const cid = formData.get("cid") as string;
+
+  const diasStr = formData.get("dias") as string;
+  let dataFim = formData.get("dataFim") as string;
+  let dias: number | undefined = undefined;
+
+  // Recalcula DataFim na Edição também
+  if (diasStr) {
+    dias = parseInt(diasStr);
+    const dataInicioObj = new Date(dataInicio);
+    const dataFimObj = new Date(dataInicioObj);
+    dataFimObj.setDate(dataFimObj.getDate() + dias - 1);
+    dataFim = dataFimObj.toISOString().split('T')[0];
+  }
+
+  // Regra INSS na edição
+  if (tipoAusencia === "SAUDE" && dias && dias > 15) {
+    tipoAusencia = "AFASTAMENTO_SUPERIOR_15";
+  }
 
   try {
     await db.update(eventosAusencia).set({
@@ -130,6 +170,8 @@ export async function atualizarAusencia(formData: FormData) {
       tipoAusencia: tipoAusencia as any,
       dataInicio,
       dataFim,
+      dias,
+      cid: cid ? cid.toUpperCase() : undefined,
       observacao: observacao || null,
       periodoAquisitivoId: periodoAquisitivoId || undefined,
     }).where(eq(eventosAusencia.id, id));
@@ -141,7 +183,14 @@ export async function atualizarAusencia(formData: FormData) {
 
   revalidatePath(`/servidores/${servidorId}/ausencias`);
   revalidatePath("/ausencias");
-  redirect(`/servidores/${servidorId}/ausencias`); 
+  
+  // Se veio da aba principal, mantemos lá. Se veio de dentro do servidor, voltamos.
+  const referer = formData.get("refererUrl") as string;
+  if (!referer) {
+    redirect(`/ausencias`);
+  } else {
+    redirect(`/servidores/${servidorId}/ausencias`); 
+  }
 }
 
 export async function excluirAusencia(id: string, detalhes: string) {

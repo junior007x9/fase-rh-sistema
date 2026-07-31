@@ -1,33 +1,30 @@
 // Arquivo: app/folha/page.tsx
 import { db } from "../../db/index";
-import { servidores, dadosPessoais } from "../../db/schema";
-import { eq, and } from "drizzle-orm";
+import { servidores, dadosPessoais, lancamentosFolha } from "../../db/schema";
+import { eq } from "drizzle-orm";
 import Link from "next/link";
-import { Calculator, Calendar, Search, FileText, ChevronRight, AlertCircle } from "lucide-react";
+import { Calculator, Calendar, Search, FileText, ChevronRight, AlertCircle, Banknote } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-function formatarMoeda(valor: number | null | undefined) {
-  if (valor === null || valor === undefined) return "R$ 0,00";
+function formatarMoeda(valor: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
 }
 
 export default async function FolhaPagamentoPage({ searchParams }: { searchParams: Promise<{ mesAno?: string, busca?: string }> }) {
   const resolvedSearchParams = await searchParams;
   
-  // Define o mês atual como padrão se não for selecionado (ex: "08-2026")
   const dataAtual = new Date();
   const mesAtualPadrao = `${String(dataAtual.getMonth() + 1).padStart(2, '0')}-${dataAtual.getFullYear()}`;
   
   const mesAnoFiltro = resolvedSearchParams?.mesAno || mesAtualPadrao;
   const termoBusca = resolvedSearchParams?.busca || "";
 
-  // Busca todos os servidores ativos
+  // 1. Busca os Servidores Ativos
   const listaServidores = await db.select({
     id: servidores.id,
     matricula: servidores.matricula,
     cargo: servidores.cargo,
-    lotacao: servidores.lotacao,
     remuneracaoBase: servidores.remuneracaoBase,
     nome: dadosPessoais.nome,
   })
@@ -35,28 +32,45 @@ export default async function FolhaPagamentoPage({ searchParams }: { searchParam
   .leftJoin(dadosPessoais, eq(servidores.id, dadosPessoais.servidorId))
   .where(eq(servidores.status, "ATIVO"));
 
-  // Filtra pela busca de nome ou matrícula
+  // 2. Busca TODOS os lançamentos da folha DESSA competência
+  const lancamentosMes = await db.select()
+    .from(lancamentosFolha)
+    .where(eq(lancamentosFolha.mesAno, mesAnoFiltro));
+
+  // 3. Monta um mapa consolidado com os totais de cada servidor
+  const totaisServidores: Record<string, { proventos: number, descontos: number }> = {};
+  
+  lancamentosMes.forEach(lan => {
+    if (!totaisServidores[lan.servidorId]) {
+      totaisServidores[lan.servidorId] = { proventos: 0, descontos: 0 };
+    }
+    if (lan.tipo === 'PROVENTO') totaisServidores[lan.servidorId].proventos += lan.valorFinal;
+    if (lan.tipo === 'DESCONTO') totaisServidores[lan.servidorId].descontos += lan.valorFinal;
+  });
+
+  // Filtro de busca textual
   const servidoresFiltrados = listaServidores.filter(s => {
     if (!termoBusca) return true;
     const buscaLower = termoBusca.toLowerCase();
     return (s.nome?.toLowerCase().includes(buscaLower) || s.matricula?.toLowerCase().includes(buscaLower));
   });
 
-  // Nomes dos meses para o seletor
   const nomesMeses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
+  // Calcula o impacto total da folha para a empresa
+  let totalGeralEmpresa = 0;
 
   return (
     <div className="max-w-7xl mx-auto pb-12 space-y-6">
       
-      {/* CABEÇALHO */}
       <header className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-gray-200 pb-6 gap-4">
         <div className="flex items-center gap-3">
           <div className="bg-emerald-100 p-3 rounded-xl text-emerald-700">
             <Calculator size={28} />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Folha de Pagamento</h1>
-            <p className="text-gray-500 mt-1">Gerencie proventos, descontos e contracheques dos servidores.</p>
+            <h1 className="text-3xl font-bold text-gray-900">Movimento: Folha de Pagamento</h1>
+            <p className="text-gray-500 mt-1">Visão consolidada e lançamentos da competência.</p>
           </div>
         </div>
       </header>
@@ -64,7 +78,6 @@ export default async function FolhaPagamentoPage({ searchParams }: { searchParam
       {/* BARRA DE FILTROS */}
       <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
         <form className="flex-1 flex gap-4 w-full">
-          
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-3 text-gray-400" size={20} />
             <input 
@@ -72,7 +85,7 @@ export default async function FolhaPagamentoPage({ searchParams }: { searchParam
               name="busca" 
               defaultValue={termoBusca}
               placeholder="Buscar por nome ou matrícula..." 
-              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow"
+              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
 
@@ -83,12 +96,15 @@ export default async function FolhaPagamentoPage({ searchParams }: { searchParam
               defaultValue={mesAnoFiltro}
               className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 font-semibold text-gray-700"
             >
-              {/* Gerando opções para os meses de 2024 até 2027 */}
               {[2024, 2025, 2026, 2027].map(ano => (
-                nomesMeses.map((mes, index) => {
-                  const valor = `${String(index + 1).padStart(2, '0')}-${ano}`;
-                  return <option key={valor} value={valor}>{mes} / {ano}</option>
-                })
+                <optgroup key={ano} label={`Ano ${ano}`}>
+                  {nomesMeses.map((mes, index) => {
+                    const valor = `${String(index + 1).padStart(2, '0')}-${ano}`;
+                    return <option key={valor} value={valor}>{mes} / {ano}</option>
+                  })}
+                  {/* NOVO: OPÇÃO DE 13º SALÁRIO */}
+                  <option value={`13-${ano}`} className="font-bold text-emerald-700">13º Salário (Abono) / {ano}</option>
+                </optgroup>
               ))}
             </select>
           </div>
@@ -99,11 +115,14 @@ export default async function FolhaPagamentoPage({ searchParams }: { searchParam
         </form>
       </div>
 
-      {/* LISTA DE SERVIDORES PARA A FOLHA */}
+      {/* LISTA CONSOLIDADA DOS SERVIDORES */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-4 bg-gray-50 border-b flex justify-between items-center">
-          <h2 className="font-bold text-gray-700">Selecione um servidor para lançar a folha</h2>
-          <span className="text-xs font-semibold bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full">
+        <div className="p-4 bg-slate-900 text-white flex justify-between items-center">
+          <h2 className="font-bold flex items-center gap-2">
+            <Banknote size={18} className="text-emerald-400"/> 
+            Espelho da Folha {mesAnoFiltro.startsWith('13') ? "(13º Salário)" : "(Regular)"}
+          </h2>
+          <span className="text-xs font-semibold bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full border border-emerald-500/30">
             Competência: {mesAnoFiltro}
           </span>
         </div>
@@ -111,40 +130,75 @@ export default async function FolhaPagamentoPage({ searchParams }: { searchParam
         {servidoresFiltrados.length === 0 ? (
           <div className="p-8 text-center text-gray-500 flex flex-col items-center">
             <AlertCircle size={40} className="text-gray-300 mb-3" />
-            <p>Nenhum servidor ativo encontrado para esta busca.</p>
+            <p>Nenhum servidor ativo encontrado.</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
-            {servidoresFiltrados.map((srv) => (
-              <div key={srv.id} className="p-4 hover:bg-emerald-50 transition-colors flex flex-col md:flex-row items-center justify-between gap-4 group">
-                <div className="flex-1 flex gap-4 items-center">
-                  <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-600">
-                    {srv.nome?.charAt(0)}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 group-hover:text-emerald-700 transition-colors">{srv.nome}</h3>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      Matrícula: {srv.matricula || "S/N"} | {srv.cargo}
-                    </p>
-                  </div>
-                </div>
+            {servidoresFiltrados.map((srv) => {
+              // Pega o cálculo em memória, ou zera se não tiver lançamentos (Salario Base fica como provento padrão inicial se for folha normal)
+              const totaisSrv = totaisServidores[srv.id] || { proventos: 0, descontos: 0 };
+              
+              const baseCalculo = mesAnoFiltro.startsWith('13') ? 0 : (srv.remuneracaoBase || 0); // O 13º não joga o salário base bruto de graça.
+              const totalProventosFinal = baseCalculo + totaisSrv.proventos;
+              const liquido = totalProventosFinal - totaisSrv.descontos;
+              
+              totalGeralEmpresa += liquido;
 
-                <div className="flex items-center gap-8">
-                  <div className="text-right">
-                    <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Salário Base</p>
-                    <p className="font-bold text-gray-800">{formatarMoeda(srv.remuneracaoBase)}</p>
+              return (
+                <div key={srv.id} className="p-4 hover:bg-emerald-50/50 transition-colors flex flex-col xl:flex-row items-center justify-between gap-6 group">
+                  
+                  {/* IDENTIFICAÇÃO */}
+                  <div className="w-full xl:w-1/3 flex gap-3 items-center">
+                    <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-600 flex-shrink-0">
+                      {srv.nome?.charAt(0)}
+                    </div>
+                    <div className="overflow-hidden">
+                      <h3 className="font-bold text-gray-900 group-hover:text-emerald-700 transition-colors truncate">{srv.nome}</h3>
+                      <p className="text-xs text-gray-500 mt-0.5 truncate">
+                        Matrícula: {srv.matricula || "S/N"} | {srv.cargo}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* TOTAIS FINANCEIROS CONSOLIDADOS */}
+                  <div className="w-full xl:w-auto flex-1 grid grid-cols-4 gap-4 text-right items-center">
+                    <div>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wide">Base Contratual</p>
+                      <p className="text-sm font-semibold text-gray-700">{formatarMoeda(srv.remuneracaoBase || 0)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-green-600/70 font-bold uppercase tracking-wide">Tot. Proventos</p>
+                      <p className="text-sm font-semibold text-green-700">{formatarMoeda(totalProventosFinal)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-red-600/70 font-bold uppercase tracking-wide">Tot. Descontos</p>
+                      <p className="text-sm font-semibold text-red-700">{formatarMoeda(totaisSrv.descontos)}</p>
+                    </div>
+                    <div className="bg-emerald-50 p-2 rounded border border-emerald-100">
+                      <p className="text-[10px] text-emerald-800 font-bold uppercase tracking-wide">Líquido</p>
+                      <p className="text-base font-black text-emerald-900">{formatarMoeda(liquido)}</p>
+                    </div>
                   </div>
                   
-                  {/* BOTÃO PARA ABRIR O CONTRACHEQUE DO SERVIDOR */}
-                  <Link 
-                    href={`/folha/${srv.id}?mesAno=${mesAnoFiltro}`} 
-                    className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 px-4 py-2 rounded-lg font-semibold text-sm transition-all shadow-sm"
-                  >
-                    <FileText size={16} /> Lançamentos <ChevronRight size={16} />
-                  </Link>
+                  {/* BOTÃO LANÇAR */}
+                  <div className="w-full xl:w-auto flex justify-end">
+                    <Link 
+                      href={`/folha/${srv.id}?mesAno=${mesAnoFiltro}`} 
+                      className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 px-4 py-2 rounded-lg font-semibold text-sm transition-all shadow-sm"
+                    >
+                      <FileText size={16} /> Lançar Eventos <ChevronRight size={16} />
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
+            
+            {/* RODAPÉ: TOTAL DA FOLHA */}
+            <div className="p-4 bg-gray-100 border-t border-gray-200 flex justify-end items-center gap-4">
+              <span className="text-sm font-bold text-gray-500 uppercase">Impacto Líquido Total da Folha:</span>
+              <span className="text-xl font-black text-gray-900">{formatarMoeda(totalGeralEmpresa)}</span>
+            </div>
+
           </div>
         )}
       </div>

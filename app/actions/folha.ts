@@ -52,31 +52,35 @@ export async function adicionarLancamentoFolha(formData: FormData) {
   if (!sessao) throw new Error("Acesso negado.");
 
   const servidorId = formData.get("servidorId") as string;
-  const mesAno = formData.get("mesAno") as string;
+  const mesAno = formData.get("mesAno") as string; // Ex: 07-2026 ou 13-2026
   const codigoEvento = formData.get("codigoEvento") as string;
   const quantidadeStr = formData.get("quantidade") as string;
   const valorManualStr = formData.get("valorManual") as string;
 
-  // Busca o servidor para pegar o salário base (usado nas fórmulas)
   const [srv] = await db.select().from(servidores).where(eq(servidores.id, servidorId));
   if (!srv) throw new Error("Servidor não encontrado");
 
-  // Identifica qual evento foi selecionado (Falta, DSR, etc)
   const evento = Object.values(EVENTOS_FOLHA).find(e => e.codigo === codigoEvento);
   if (!evento) throw new Error("Evento inválido");
 
-  const quantidade = quantidadeStr ? parseFloat(quantidadeStr) : null;
+  let quantidade = quantidadeStr ? parseFloat(quantidadeStr) : null;
   let valorFinal = valorManualStr ? parseFloat(valorManualStr.replace(',', '.')) : 0;
+  const anoReferencia = parseInt(mesAno.split('-')[1]);
 
   // MOTOR DE CÁLCULO PARAMETRIZADO
-  // Se for FALTA (D001), aplica a fórmula: Salário / 30 * Dias de Falta
   if (codigoEvento === EVENTOS_FOLHA.FALTA.codigo && quantidade && srv.remuneracaoBase) {
     valorFinal = calcularDescontoFalta(srv.remuneracaoBase, quantidade);
   }
 
-  // Se o valor final for 0 ou inválido, trava a inserção
+  // NOVO: Cálculo 13º Automático (Proporcional à admissão)
+  if (codigoEvento === EVENTOS_FOLHA.DECIMO_TERCEIRO.codigo && srv.remuneracaoBase && srv.dataAdmissao) {
+    const calculo = calcularDecimoTerceiro(srv.remuneracaoBase, srv.dataAdmissao, anoReferencia);
+    quantidade = calculo.avos; // O campo "ref/quantidade" vira os "Avos" (ex: 10)
+    valorFinal = calculo.valor;
+  }
+
   if (valorFinal <= 0) {
-    throw new Error("O valor do lançamento deve ser maior que zero.");
+    throw new Error("O valor do lançamento ou o tempo de serviço resulta em valor zero.");
   }
 
   try {

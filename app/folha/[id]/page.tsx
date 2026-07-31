@@ -6,7 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, PlusCircle, Trash2, FileText, Sun, AlertOctagon, X, Plane, AlertTriangle } from "lucide-react";
 import { EVENTOS_FOLHA } from "../../utils/calculosFolha";
 import { adicionarLancamentoFolha, excluirLancamentoFolha, processarFerias, processarRescisao } from "../../actions/folha";
-import BotaoImprimirContracheque from "../../../components/BotaoImprimirContracheque";
+import BotaoImprimirContracheque from "../../components/BotaoImprimirContracheque";
 
 export const dynamic = "force-dynamic";
 

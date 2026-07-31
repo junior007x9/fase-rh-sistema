@@ -1,19 +1,23 @@
 // Arquivo: app/page.tsx
 import { db } from "../db/index";
-import { servidores, dadosPessoais, lotacoes, eventosAusencia } from "../db/schema"; // <-- Nome corrigido aqui
-import { eq, sql } from "drizzle-orm";
-import { Users, UserMinus, MapPin, Briefcase, Gift, Calendar, BarChart3, PieChart } from "lucide-react";
+import { servidores, dadosPessoais, lotacoes, eventosAusencia, periodosAquisitivos } from "../db/schema";
+import { eq, sql, count } from "drizzle-orm";
+import { Users, UserMinus, UserX, MapPin, Briefcase, Gift, Calendar, BarChart3, PieChart, CalendarClock } from "lucide-react";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  // Buscando métricas básicas
+  // 1. Buscando métricas expandidas para os 6 cards
   const totalServidoresQuery = await db.select({ count: sql<number>`count(*)` }).from(servidores).where(eq(servidores.status, "ATIVO"));
+  const totalDesligadosQuery = await db.select({ count: sql<number>`count(*)` }).from(servidores).where(eq(servidores.status, "DESLIGADO"));
   const totalLotacoesQuery = await db.select({ count: sql<number>`count(*)` }).from(lotacoes);
+  const totalFeriasPendentesQuery = await db.select({ count: count() }).from(periodosAquisitivos).where(eq(periodosAquisitivos.status, 'PENDENTE'));
 
   const totalAtivos = totalServidoresQuery[0]?.count || 0;
+  const totalDesligados = totalDesligadosQuery[0]?.count || 0;
   const totalLotacoes = totalLotacoesQuery[0]?.count || 0;
+  const totalFeriasPendentes = totalFeriasPendentesQuery[0]?.count || 0;
 
   // Busca dados para o Gráfico de Vínculos (Dinâmico)
   const vinculosData = await db.select({
@@ -25,8 +29,8 @@ export default async function DashboardPage() {
   .groupBy(servidores.vinculo);
 
   // 🚀 BUSCANDO DADOS REAIS DE AUSÊNCIAS E LICENÇAS
-  const listaAusencias = await db.select().from(eventosAusencia); // <-- Nome corrigido aqui
-  const totalAfastados = listaAusencias.length; // Quantidade total cadastrada
+  const listaAusencias = await db.select().from(eventosAusencia);
+  const totalAfastados = listaAusencias.length;
 
   // Lógica do Gráfico de Ausências (Últimos 6 meses)
   const nomesMesesCurto = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -46,10 +50,13 @@ export default async function DashboardPage() {
   listaAusencias.forEach(aus => {
     const dataRef = (aus as any).dataInicio || (aus as any).criadoEm;
     if (dataRef) {
-      const [ano, mes] = dataRef.split('T')[0].split('-'); 
-      const mesIndex = ultimos6Meses.findIndex(m => m.mes === parseInt(mes) && m.ano === parseInt(ano));
-      if (mesIndex !== -1) {
-        ultimos6Meses[mesIndex].val++;
+      const parts = dataRef.toString().split('T')[0].split('-');
+      if (parts.length >= 2) {
+        const [ano, mes] = parts;
+        const mesIndex = ultimos6Meses.findIndex(m => m.mes === parseInt(mes) && m.ano === parseInt(ano));
+        if (mesIndex !== -1) {
+          ultimos6Meses[mesIndex].val++;
+        }
       }
     } else {
       ultimos6Meses[5].val++;
@@ -77,11 +84,15 @@ export default async function DashboardPage() {
 
   const aniversariantesDoMes = listaServidores.filter(srv => {
     if (!srv.dataNascimento) return false;
-    const [ano, mes, dia] = srv.dataNascimento.split('-');
-    return parseInt(mes) === mesAtual;
+    const parts = srv.dataNascimento.split('-');
+    if (parts.length >= 2) {
+      const [ano, mes, dia] = parts;
+      return parseInt(mes) === mesAtual;
+    }
+    return false;
   }).sort((a, b) => {
-    const diaA = parseInt(a.dataNascimento!.split('-')[2]);
-    const diaB = parseInt(b.dataNascimento!.split('-')[2]);
+    const diaA = parseInt(a.dataNascimento!.split('-')[2] || '0');
+    const diaB = parseInt(b.dataNascimento!.split('-')[2] || '0');
     return diaA - diaB;
   });
 
@@ -93,39 +104,63 @@ export default async function DashboardPage() {
         <p className="text-gray-500 mt-1">Visão estratégica dos recursos humanos da FASE-MA.</p>
       </header>
 
-      {/* CARDS SUPERIORES */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-blue-600 rounded-xl p-6 text-white shadow-sm flex flex-col justify-between h-32 relative overflow-hidden">
+      {/* CARDS SUPERIORES (EXPANDIDOS COM 6 INDICADORES CHAVE) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        
+        {/* Ativos */}
+        <div className="bg-blue-600 rounded-xl p-5 text-white shadow-sm flex flex-col justify-between h-28 relative overflow-hidden">
           <div className="relative z-10">
-            <p className="text-blue-100 text-sm font-medium">Servidores Ativos</p>
-            <h2 className="text-4xl font-bold mt-1">{totalAtivos}</h2>
+            <p className="text-blue-100 text-xs font-semibold uppercase tracking-wider">Ativos</p>
+            <h2 className="text-3xl font-extrabold mt-1">{totalAtivos}</h2>
           </div>
-          <Users size={48} className="absolute right-4 bottom-4 text-blue-500 opacity-50" />
+          <Users size={40} className="absolute right-3 bottom-3 text-blue-500 opacity-40" />
         </div>
 
-        <div className="bg-orange-500 rounded-xl p-6 text-white shadow-sm flex flex-col justify-between h-32 relative overflow-hidden">
+        {/* Afastamentos */}
+        <div className="bg-orange-500 rounded-xl p-5 text-white shadow-sm flex flex-col justify-between h-28 relative overflow-hidden">
           <div className="relative z-10">
-            <p className="text-orange-100 text-sm font-medium">Afastamentos/Licenças</p>
-            <h2 className="text-4xl font-bold mt-1">{totalAfastados}</h2>
+            <p className="text-orange-100 text-xs font-semibold uppercase tracking-wider">Atestados</p>
+            <h2 className="text-3xl font-extrabold mt-1">{totalAfastados}</h2>
           </div>
-          <UserMinus size={48} className="absolute right-4 bottom-4 text-orange-400 opacity-50" />
+          <UserMinus size={40} className="absolute right-3 bottom-3 text-orange-400 opacity-40" />
         </div>
 
-        <div className="bg-purple-600 rounded-xl p-6 text-white shadow-sm flex flex-col justify-between h-32 relative overflow-hidden">
+        {/* Desligados / Rescisões */}
+        <div className="bg-red-600 rounded-xl p-5 text-white shadow-sm flex flex-col justify-between h-28 relative overflow-hidden">
           <div className="relative z-10">
-            <p className="text-purple-100 text-sm font-medium">Total de Lotações</p>
-            <h2 className="text-4xl font-bold mt-1">{totalLotacoes}</h2>
+            <p className="text-red-100 text-xs font-semibold uppercase tracking-wider">Desligados</p>
+            <h2 className="text-3xl font-extrabold mt-1">{totalDesligados}</h2>
           </div>
-          <MapPin size={48} className="absolute right-4 bottom-4 text-purple-500 opacity-50" />
+          <UserX size={40} className="absolute right-3 bottom-3 text-red-500 opacity-40" />
         </div>
 
-        <div className="bg-emerald-500 rounded-xl p-6 text-white shadow-sm flex flex-col justify-between h-32 relative overflow-hidden">
+        {/* Lotações */}
+        <div className="bg-purple-600 rounded-xl p-5 text-white shadow-sm flex flex-col justify-between h-28 relative overflow-hidden">
           <div className="relative z-10">
-            <p className="text-emerald-100 text-sm font-medium">Cadastro de Reserva</p>
-            <h2 className="text-4xl font-bold mt-1">0</h2>
+            <p className="text-purple-100 text-xs font-semibold uppercase tracking-wider">Lotações</p>
+            <h2 className="text-3xl font-extrabold mt-1">{totalLotacoes}</h2>
           </div>
-          <Briefcase size={48} className="absolute right-4 bottom-4 text-emerald-400 opacity-50" />
+          <MapPin size={40} className="absolute right-3 bottom-3 text-purple-500 opacity-40" />
         </div>
+
+        {/* Férias Pendentes */}
+        <div className="bg-teal-600 rounded-xl p-5 text-white shadow-sm flex flex-col justify-between h-28 relative overflow-hidden">
+          <div className="relative z-10">
+            <p className="text-teal-100 text-xs font-semibold uppercase tracking-wider">Férias Pend.</p>
+            <h2 className="text-3xl font-extrabold mt-1">{totalFeriasPendentes}</h2>
+          </div>
+          <CalendarClock size={40} className="absolute right-3 bottom-3 text-teal-500 opacity-40" />
+        </div>
+
+        {/* Cadastro de Reserva */}
+        <div className="bg-emerald-600 rounded-xl p-5 text-white shadow-sm flex flex-col justify-between h-28 relative overflow-hidden">
+          <div className="relative z-10">
+            <p className="text-emerald-100 text-xs font-semibold uppercase tracking-wider">Banco Reserva</p>
+            <h2 className="text-3xl font-extrabold mt-1">0</h2>
+          </div>
+          <Briefcase size={40} className="absolute right-3 bottom-3 text-emerald-400 opacity-40" />
+        </div>
+
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -212,7 +247,8 @@ export default async function DashboardPage() {
             ) : (
               <ul className="space-y-3">
                 {aniversariantesDoMes.map(srv => {
-                  const dia = srv.dataNascimento?.split('-')[2];
+                  const parts = srv.dataNascimento?.split('-');
+                  const dia = parts && parts.length === 3 ? parts[2] : '--';
                   return (
                     <li key={srv.id} className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 bg-gray-50 hover:bg-pink-50 hover:border-pink-200 transition-colors">
                       <div className="bg-white text-pink-600 font-bold text-lg h-10 w-10 min-w-[40px] rounded-full flex items-center justify-center shadow-sm border border-pink-100">

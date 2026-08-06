@@ -1,4 +1,5 @@
-// Arquivo: app/servidores/[id]/page.tsx
+// Arquivo: app/servidores/[id]/page.tsx 
+
 import { db } from "../../../db/index";
 import { 
   servidores, dadosPessoais, documentos, enderecos, dadosBancarios, 
@@ -62,7 +63,15 @@ export default async function PerfilServidorPage({
   const [banco] = await db.select().from(dadosBancarios).where(eq(dadosBancarios.servidorId, servidorId));
   
   const listaDependentes = await db.select().from(dependentesPensionistas).where(eq(dependentesPensionistas.servidorId, servidorId));
-  const listaLotacoes = await db.select().from(lotacoes);
+  // 1. Tenta buscar da tabela de lotações
+  let listaLotacoes = await db.select().from(lotacoes);
+
+  // 2. SEGURANÇA: Se a tabela auxiliar estiver vazia, extrai as lotações reais direto dos servidores
+  if (listaLotacoes.length === 0) {
+    const todosServidoresLotacao = await db.select({ lotacao: servidores.lotacao }).from(servidores);
+    const lotacoesUnicas = Array.from(new Set(todosServidoresLotacao.map(s => s.lotacao).filter(Boolean))) as string[];
+    listaLotacoes = lotacoesUnicas.map((nome, index) => ({ id: String(index), nome }));
+  }
   
   const historicoMovimentacoes = await db.select()
     .from(historicoTransferencias)

@@ -53,7 +53,7 @@ export default function LoginPage() {
                 name="email" 
                 required 
                 placeholder="seu.email@fase.ma.gov.br" 
-                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all text-sm font-medium"
+                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all text-sm font-bold text-slate-900 placeholder:text-slate-400"
               />
             </div>
           </div>
@@ -68,7 +68,7 @@ export default function LoginPage() {
                 name="senha" 
                 required 
                 placeholder="Digite sua senha..." 
-                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all text-sm font-medium"
+                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all text-sm font-bold text-slate-900 placeholder:text-slate-400"
               />
             </div>
           </div>

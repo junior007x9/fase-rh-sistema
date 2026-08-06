@@ -52,7 +52,7 @@ export default function ImportacaoPage() {
       console.log(`Enviando ${linhasUteis.length} funcionários para o banco de dados...`);
 
       // 6. Enviar a versão "limpa" para o Backend processar
-      const response = await processarBancoDeDados(linhasUteis);
+      const response = await processarBancoDeDados(JSON.stringify(linhasUteis));
       
       setResultado({ cadastrados: response.cadastrados, erros: response.erros });
 

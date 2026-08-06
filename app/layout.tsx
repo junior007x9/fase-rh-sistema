@@ -71,13 +71,13 @@ export default async function RootLayout({
                 <Link href="/ausencias" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-colors">
                   <Clock size={18} /> Ausências e Licenças
                 </Link>
-                <Link href="/importacao" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-colors">
-                  <FileText size={18} /> Importar Planilha
+                <Link href="/folha" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                  <FileText size={18} /> Folha de Pagamento
                 </Link>
                 <Link href="/relatorios" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-colors">
                   <BarChart3 size={18} /> Relatórios
                 </Link>
-                <Link href="/acessos" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                <Link href="/gestao-acessos" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-colors">
                   <Shield size={18} /> Gestão de Acessos
                 </Link>
                 <Link href="/recrutamento" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-colors">

@@ -3,59 +3,84 @@
 
 import { useState } from "react";
 import { fazerLogin } from "../actions/auth";
-import { useRouter } from "next/navigation";
+import { Lock, Loader2, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
   const [erro, setErro] = useState("");
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const [carregando, setCarregando] = useState(false);
 
-  async function handleSubmit(formData: FormData) {
-    setLoading(true);
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setCarregando(true);
     setErro("");
 
-    // Recebe a resposta suave do servidor
-    const response = await fazerLogin(formData);
-
-    // Se veio um erro, mostra na tela vermelha sem estourar o sistema
-    if (response?.erro) {
-      setErro(response.erro);
-      setLoading(false);
-    } 
-    // Se foi sucesso, redireciona para o painel
-    else if (response?.sucesso) {
-      router.push("/");
+    const formData = new FormData(e.currentTarget);
+    const res = await fazerLogin(formData);
+    
+    if (res?.erro) {
+      setErro(res.erro);
+      setCarregando(false);
+    } else if (res?.sucesso) {
+      // Força o redirecionamento completo para a raiz para carregar o sistema logado
+      window.location.href = "/";
     }
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-slate-100">
-        <div className="flex flex-col items-center mb-8">
-          <img src="/logo.jpg" alt="FASE-MA" className="w-32 mb-4 rounded-lg shadow-sm" />
-          <h1 className="text-2xl font-bold text-slate-800">Portal do Servidor</h1>
-          <p className="text-slate-500 text-sm mt-1">Sistema de Recursos Humanos</p>
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+      <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-8 space-y-6 border border-slate-100">
+        
+        <div className="flex flex-col items-center text-center space-y-3">
+          <img 
+            src="/logo.jpg" 
+            alt="Logo FASE" 
+            className="w-16 h-16 object-contain rounded-2xl bg-slate-50 p-1.5 border border-slate-200 shadow-sm" 
+          />
+          <div>
+            <h1 className="text-xl font-extrabold text-slate-800">RECURSOS HUMANOS</h1>
+            <p className="text-xs text-slate-500 font-medium tracking-wide mt-0.5">FUNDAÇÃO FASE-MA</p>
+          </div>
         </div>
 
-        {erro && (
-          <div className="bg-red-50 text-red-600 p-4 rounded-lg text-sm mb-6 border border-red-100 text-center font-medium shadow-sm">
-            {erro}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Senha de Acesso</label>
+            <div className="relative">
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input 
+                type="password" 
+                name="senha" 
+                required 
+                placeholder="Digite a senha do sistema..." 
+                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all text-sm font-medium"
+              />
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1.5">Senha padrão configurada: <strong className="text-slate-600">fase2026</strong></p>
           </div>
-        )}
 
-        <form action={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">E-mail Corporativo</label>
-            <input type="email" name="email" required className="w-full border border-slate-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="admin@fase.ma.gov.br" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Senha</label>
-            <input type="password" name="senha" required className="w-full border border-slate-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="••••••••" />
-          </div>
-          <button disabled={loading} type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors shadow-md disabled:opacity-70">
-            {loading ? "Verificando Credenciais..." : "Acessar Sistema"}
+          {erro && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs font-bold text-center">
+              {erro}
+            </div>
+          )}
+
+          <button 
+            type="submit" 
+            disabled={carregando}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 disabled:opacity-50"
+          >
+            {carregando ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <>Entrar no Sistema <ArrowRight size={18} /></>
+            )}
           </button>
         </form>
+
+        <div className="text-center pt-2 border-t border-slate-100">
+          <p className="text-[11px] text-slate-400">Acesso restrito a colaboradores autorizados da FASE-MA.</p>
+        </div>
+
       </div>
     </div>
   );

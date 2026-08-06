@@ -3,8 +3,8 @@
 
 import { useState } from "react";
 import * as XLSX from "xlsx";
-import { UploadCloud, CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
-import { processarBancoDeDados } from "../actions/importacao";
+import { UploadCloud, CheckCircle, AlertTriangle, Loader2, Trash2 } from "lucide-react";
+import { processarBancoDeDados, zerarBancoDeDados } from "../actions/importacao";
 
 export default function ImportacaoPage() {
   const [carregando, setCarregando] = useState(false);
@@ -41,7 +41,6 @@ export default function ImportacaoPage() {
         return;
       }
 
-      // Chama o backend enviando os dados empacotados
       const response = await processarBancoDeDados(JSON.stringify(linhasUteis));
       
       setResultado({ 
@@ -57,6 +56,30 @@ export default function ImportacaoPage() {
     }
   };
 
+  // FUNÇÃO PARA ZERAR O BANCO
+  const handleZerarBanco = async () => {
+    const confirmar = window.confirm(
+      "🛑 ATENÇÃO: Isso vai apagar TODOS os servidores, férias, pagamentos e históricos do banco de dados!\n\nTem certeza ABSOLUTA que deseja zerar o sistema?"
+    );
+    
+    if (!confirmar) return;
+
+    setCarregando(true);
+    try {
+      const res = await zerarBancoDeDados();
+      if (res.sucesso) {
+        alert("✅ Banco de Dados ZERADO com sucesso! Você já pode importar a planilha oficial.");
+        window.location.reload(); // Recarrega a página para limpar tudo
+      } else {
+        alert(`❌ Erro ao zerar banco: ${res.erro}`);
+      }
+    } catch (error) {
+      alert("Erro técnico ao se comunicar com o servidor.");
+    } finally {
+      setCarregando(false);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
       <header>
@@ -64,13 +87,13 @@ export default function ImportacaoPage() {
         <p className="text-gray-500 mt-1">Carregue a planilha oficial (Formato .ods ou .xlsx) para alimentar o sistema automaticamente.</p>
       </header>
 
-      <div className="bg-white border-2 border-dashed border-blue-200 rounded-2xl p-10 flex flex-col items-center justify-center text-center shadow-sm">
+      <div className="bg-white border-2 border-dashed border-blue-200 rounded-2xl p-10 flex flex-col items-center justify-center text-center shadow-sm relative">
         
         {carregando ? (
           <div className="flex flex-col items-center space-y-4">
             <Loader2 size={48} className="text-blue-500 animate-spin" />
-            <h3 className="text-xl font-bold text-gray-800">Processando Planilha...</h3>
-            <p className="text-gray-500">Estamos salvando milhares de dados. Não feche a página, pode levar 1 minuto.</p>
+            <h3 className="text-xl font-bold text-gray-800">Processando...</h3>
+            <p className="text-gray-500">Por favor, não feche esta página.</p>
           </div>
         ) : resultado ? (
           <div className="flex flex-col items-center space-y-4 w-full">
@@ -92,7 +115,6 @@ export default function ImportacaoPage() {
               </p>
             </div>
 
-            {/* DEDO DURO: SE O BANCO RECUSAR, VAI APARECER AQUI O MOTIVO EXATO */}
             {resultado.erros > 0 && resultado.detalheErro && (
               <div className="mt-4 w-full max-w-lg bg-red-50 border border-red-200 p-4 rounded-lg text-left shadow-sm">
                 <p className="text-sm text-red-800 font-bold mb-1">Diagnóstico do Banco de Dados (Primeiro Erro):</p>
@@ -101,7 +123,7 @@ export default function ImportacaoPage() {
             )}
 
             <button onClick={() => setResultado(null)} className="mt-4 text-blue-600 font-bold hover:underline">
-              Tentar Novamente
+              Importar outra planilha
             </button>
           </div>
         ) : (
@@ -116,6 +138,14 @@ export default function ImportacaoPage() {
               Selecionar Planilha (.ods / .xlsx)
               <input type="file" accept=".ods, .xlsx" className="hidden" onChange={handleFileUpload} />
             </label>
+
+            {/* BOTÃO VERMELHO DE EMERGÊNCIA */}
+            <button 
+              onClick={handleZerarBanco} 
+              className="absolute bottom-4 right-4 flex items-center gap-2 text-red-600 hover:text-red-800 font-bold text-xs bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded transition-colors"
+            >
+              <Trash2 size={14} /> Zerar Banco
+            </button>
           </>
         )}
         

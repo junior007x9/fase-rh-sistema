@@ -1,21 +1,37 @@
 // Arquivo: app/layout.tsx
 import "./globals.css";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { 
   LayoutDashboard, Users, Briefcase, Calendar, 
   Clock, FileText, BarChart3, Shield, UserPlus, LogOut 
 } from "lucide-react";
+import LoginPage from "./login/page";
 
 export const metadata = {
   title: 'FASE-MA RH Sistema',
   description: 'Sistema de Gestão de Recursos Humanos',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const cookieStore = await cookies();
+  const logado = cookieStore.get("fase_logado")?.value === "true";
+
+  // Se não estiver logado, exibe exclusivamente a tela de login
+  if (!logado) {
+    return (
+      <html lang="pt-BR">
+        <body className="bg-slate-900 text-slate-900 antialiased">
+          <LoginPage />
+        </body>
+      </html>
+    );
+  }
+
   return (
     <html lang="pt-BR">
       <body className="bg-slate-100 text-slate-900 antialiased">

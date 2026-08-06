@@ -2,7 +2,11 @@
 "use server";
 
 import { db } from "../../db/index";
-import { servidores, dadosPessoais, documentos, dadosBancarios } from "../../db/schema";
+import { 
+  servidores, dadosPessoais, documentos, dadosBancarios,
+  enderecos, dependentesPensionistas, historicoTransferencias,
+  periodosAquisitivos, eventosAusencia, lancamentosFolha
+} from "../../db/schema";
 import { randomUUID } from "crypto";
 
 function formatarData(dataBruta: string | number) {
@@ -23,14 +27,11 @@ export async function processarBancoDeDados(dadosJson: string) {
 
   try {
     const linhas = JSON.parse(dadosJson);
-    
-    // TÉCNICA DE LOTES: Vamos dividir os 2.700 funcionários em pacotes de 500 para não dar Timeout
     const TAMANHO_LOTE = 500;
 
     for (let i = 0; i < linhas.length; i += TAMANHO_LOTE) {
       const pedaco = linhas.slice(i, i + TAMANHO_LOTE);
 
-      // Arrays que vão guardar o pacote para o "Bulk Insert"
       const loteServidores = [];
       const lotePessoais = [];
       const loteDocumentos = [];
@@ -76,8 +77,6 @@ export async function processarBancoDeDados(dadosJson: string) {
           const tituloSeguro = `SEM-TITULO-${codigoAleatorio}`;
           const pisSeguro = `SEM-PIS-${codigoAleatorio}`;
 
-          // Em vez de salvar um por um, guardamos na "caixa" (Array)
-          // Adicionamos o 'as any' no final para o TypeScript parar de encher!
           loteServidores.push({
             id: servidorId,
             matricula: matriculaSegura,
@@ -127,7 +126,6 @@ export async function processarBancoDeDados(dadosJson: string) {
         }
       }
 
-      // DISPARO EM MASSA: Salva os 500 de uma vez (Leva menos de 1 segundo!)
       if (loteServidores.length > 0) await db.insert(servidores).values(loteServidores);
       if (lotePessoais.length > 0) await db.insert(dadosPessoais).values(lotePessoais);
       if (loteDocumentos.length > 0) await db.insert(documentos).values(loteDocumentos);
@@ -140,5 +138,28 @@ export async function processarBancoDeDados(dadosJson: string) {
     
   } catch (error: any) {
     return { sucesso: false, cadastrados, erros, detalheErro: error.message || String(error) };
+  }
+}
+
+// NOVA FUNÇÃO: ZERAR BANCO DE DADOS
+export async function zerarBancoDeDados() {
+  try {
+    // Apaga as tabelas dependentes (filhas) primeiro para não dar erro de chave
+    await db.delete(lancamentosFolha);
+    await db.delete(eventosAusencia);
+    await db.delete(periodosAquisitivos);
+    await db.delete(historicoTransferencias);
+    await db.delete(dependentesPensionistas);
+    await db.delete(dadosBancarios);
+    await db.delete(enderecos);
+    await db.delete(documentos);
+    await db.delete(dadosPessoais);
+    
+    // Apaga a tabela principal de servidores
+    await db.delete(servidores);
+
+    return { sucesso: true };
+  } catch (error: any) {
+    return { sucesso: false, erro: error.message || String(error) };
   }
 }

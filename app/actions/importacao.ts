@@ -24,6 +24,7 @@ export async function processarBancoDeDados(linhas: any[][]) {
   for (let i = 1; i < linhas.length; i++) {
     const linha = linhas[i];
     
+    // Se a linha estiver vazia ou não tiver nome (Coluna B), pula.
     if (!linha || !linha[1]) continue;
 
     try {
@@ -68,20 +69,26 @@ export async function processarBancoDeDados(linhas: any[][]) {
         remuneracaoBase: remuneracao,
       });
 
-      // 2. Salvar na Tabela de Dados Pessoais (Sem ID gerado, usa apenas o servidorId)
+      // 2. Salvar na Tabela de Dados Pessoais (Preenchendo campos obrigatórios com valores padrão)
       await db.insert(dadosPessoais).values({
         servidorId,
         nome,
-      });
+        dataNascimento: "1900-01-01", // Data genérica para não quebrar o banco
+        grupoEtnico: "NÃO INFORMADO",
+        estadoCivil: "NÃO INFORMADO",
+        genero: "NÃO INFORMADO",
+        nomeMae: "NÃO INFORMADO",
+        nacionalidade: "NÃO INFORMADA"
+      } as any);
 
-      // 3. Salvar Documentos (Sem ID gerado, usa apenas o servidorId)
+      // 3. Salvar Documentos
       await db.insert(documentos).values({
         servidorId,
-        cpf,
-        rg,
-      });
+        cpf: cpf || "NÃO INFORMADO",
+        rg: rg || "NÃO INFORMADO",
+      } as any);
 
-      // 4. Salvar Dados Bancários (Esta tabela possui ID)
+      // 4. Salvar Dados Bancários
       if (banco || agencia || conta) {
         await db.insert(dadosBancarios).values({
           id: randomUUID(),

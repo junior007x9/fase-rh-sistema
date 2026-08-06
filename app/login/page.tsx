@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { fazerLogin } from "../actions/auth";
-import { Lock, Loader2, ArrowRight } from "lucide-react";
+import { Lock, Mail, Loader2, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
   const [erro, setErro] = useState("");
@@ -21,7 +21,6 @@ export default function LoginPage() {
       setErro(res.erro);
       setCarregando(false);
     } else if (res?.sucesso) {
-      // Força o redirecionamento completo para a raiz para carregar o sistema logado
       window.location.href = "/";
     }
   }
@@ -43,6 +42,23 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          
+          {/* CAMPO DE E-MAIL */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">E-mail de Acesso</label>
+            <div className="relative">
+              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input 
+                type="email" 
+                name="email" 
+                required 
+                placeholder="seu.email@fase.ma.gov.br" 
+                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all text-sm font-medium"
+              />
+            </div>
+          </div>
+
+          {/* CAMPO DE SENHA */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Senha de Acesso</label>
             <div className="relative">
@@ -51,11 +67,11 @@ export default function LoginPage() {
                 type="password" 
                 name="senha" 
                 required 
-                placeholder="Digite a senha do sistema..." 
+                placeholder="Digite sua senha..." 
                 className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all text-sm font-medium"
               />
             </div>
-            <p className="text-[11px] text-slate-400 mt-1.5">Senha padrão configurada: <strong className="text-slate-600">fase2026</strong></p>
+            <p className="text-[11px] text-slate-400 mt-1.5">Primeiro acesso? Digite qualquer e-mail e a senha: <strong className="text-slate-600">fase2026</strong></p>
           </div>
 
           {erro && (
@@ -67,7 +83,7 @@ export default function LoginPage() {
           <button 
             type="submit" 
             disabled={carregando}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 disabled:opacity-50"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 disabled:opacity-50 mt-2"
           >
             {carregando ? (
               <Loader2 size={18} className="animate-spin" />

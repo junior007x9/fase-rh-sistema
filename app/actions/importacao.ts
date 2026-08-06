@@ -69,11 +69,11 @@ export async function processarBancoDeDados(linhas: any[][]) {
         remuneracaoBase: remuneracao,
       });
 
-      // 2. Salvar na Tabela de Dados Pessoais (Preenchendo campos obrigatórios com valores padrão)
+      // 2. Salvar na Tabela de Dados Pessoais
       await db.insert(dadosPessoais).values({
         servidorId,
         nome,
-        dataNascimento: "1900-01-01", // Data genérica para não quebrar o banco
+        dataNascimento: "1900-01-01", 
         grupoEtnico: "NÃO INFORMADO",
         estadoCivil: "NÃO INFORMADO",
         genero: "NÃO INFORMADO",
@@ -88,16 +88,15 @@ export async function processarBancoDeDados(linhas: any[][]) {
         rg: rg || "NÃO INFORMADO",
       } as any);
 
-      // 4. Salvar Dados Bancários
+      // 4. Salvar Dados Bancários (Removido o gerador de ID aqui também)
       if (banco || agencia || conta) {
         await db.insert(dadosBancarios).values({
-          id: randomUUID(),
           servidorId,
           banco,
           agencia,
           conta,
           nomeTitular: nome
-        });
+        } as any);
       }
 
       cadastrados++;

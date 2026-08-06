@@ -1,35 +1,88 @@
 // Arquivo: app/layout.tsx
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
-import Sidebar from "./components/Sidebar";
+import Link from "next/link";
+import { 
+  LayoutDashboard, Users, Briefcase, Calendar, 
+  Clock, FileText, BarChart3, Shield, UserPlus, LogOut 
+} from "lucide-react";
 
-const inter = Inter({ subsets: ["latin"] });
-
-export const metadata: Metadata = {
-  title: "FASE-MA | Sistema RH",
-  description: "Sistema de Gestão de Recursos Humanos da FASE-MA",
+export const metadata = {
+  title: 'FASE-MA RH Sistema',
+  description: 'Sistema de Gestão de Recursos Humanos',
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="pt-BR">
-      <body className={`${inter.className} bg-slate-50 min-h-screen flex`}>
-        
-        {/* MENU LATERAL INTELIGENTE */}
-        <Sidebar />
+      <body className="bg-slate-100 text-slate-900 antialiased">
+        <div className="min-h-screen flex flex-col md:flex-row">
+          
+          {/* MENU LATERAL EM MODO CLARO */}
+          <aside className="w-full md:w-64 bg-white text-slate-700 flex flex-col justify-between shrink-0 border-r border-slate-200 shadow-sm">
+            <div>
+              {/* Logo / Topo */}
+              <div className="p-5 border-b border-slate-100 flex items-center gap-3">
+                <img 
+                  src="/logo.jpg" 
+                  alt="Logo FASE" 
+                  className="w-10 h-10 object-contain rounded-xl bg-slate-50 p-1 border border-slate-200" 
+                />
+                <div>
+                  <h1 className="font-bold text-slate-800 text-sm">RECURSOS HUMANOS</h1>
+                  <p className="text-xs text-slate-400">FASE-MA</p>
+                </div>
+              </div>
 
-        {/* CONTEÚDO PRINCIPAL */}
-        <main className="flex-1 flex flex-col h-screen overflow-y-auto">
-          <div className="p-8">
+              {/* Links de Navegação */}
+              <nav className="p-3 space-y-1 text-sm font-medium">
+                <Link href="/" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                  <LayoutDashboard size={18} /> Início
+                </Link>
+                <Link href="/servidores" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                  <Users size={18} /> Servidores
+                </Link>
+                <Link href="/cargos-lotacoes" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                  <Briefcase size={18} /> Cargos e Lotações
+                </Link>
+                <Link href="/ferias" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                  <Calendar size={18} /> Controle de Férias
+                </Link>
+                <Link href="/ausencias" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                  <Clock size={18} /> Ausências e Licenças
+                </Link>
+                <Link href="/importacao" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                  <FileText size={18} /> Importar Planilha
+                </Link>
+                <Link href="/relatorios" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                  <BarChart3 size={18} /> Relatórios
+                </Link>
+                <Link href="/acessos" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                  <Shield size={18} /> Gestão de Acessos
+                </Link>
+                <Link href="/recrutamento" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                  <UserPlus size={18} /> Recrutamento
+                </Link>
+              </nav>
+            </div>
+
+            {/* Rodapé do Menu */}
+            <div className="p-3 border-t border-slate-100">
+              <Link href="/sair" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-600 hover:bg-red-50 transition-colors text-sm font-medium">
+                <LogOut size={18} /> Sair / Desconectar
+              </Link>
+            </div>
+          </aside>
+
+          {/* CONTEÚDO PRINCIPAL */}
+          <main className="flex-1 p-4 md:p-8 overflow-x-hidden">
             {children}
-          </div>
-        </main>
-        
+          </main>
+
+        </div>
       </body>
     </html>
   );

@@ -7,7 +7,7 @@ import { usuarios } from "../../db/schema";
 import { eq } from "drizzle-orm";
 import { SignJWT, jwtVerify } from "jose";
 import { randomUUID } from "crypto";
-import bcrypt from "bcryptjs"; // ⬅️ Nosso novo tradutor de criptografia
+import bcrypt from "bcryptjs";
 
 const JWT_SECRET = process.env.JWT_SECRET || "chave_secreta_padrao_fase_ma";
 
@@ -23,29 +23,30 @@ export async function fazerLogin(formData: FormData) {
   try {
     const resultado = await db.select().from(usuarios).where(eq(usuarios.email, email));
     const usuario = resultado[0];
+    let roleUsuario = "DIRETORIA";
 
     if (!usuario) {
       const totalUsuarios = await db.select().from(usuarios);
       if (totalUsuarios.length === 0) {
-        // Criptografa a senha do primeiro admin para manter o padrão seguro!
+        // Criptografa a senha do primeiro admin
         const senhaCriptografada = await bcrypt.hash(senha, 10);
+        const novoId = randomUUID();
         
         await db.insert(usuarios).values({
-          id: randomUUID(),
+          id: novoId,
           nome: "Administrador Geral",
           email,
           senha: senhaCriptografada, 
           role: "DIRETORIA", 
         });
+
+        roleUsuario = "DIRETORIA";
       } else {
         return { erro: "Acesso negado. E-mail ou senha incorretos." };
       }
     } else {
-      // ⬅️ A MÁGICA ACONTECE AQUI
-      // Compara a senha que o usuário digitou com a criptografia salva no banco
+      roleUsuario = usuario.role || "DIRETORIA";
       const senhaValidaCriptografada = await bcrypt.compare(senha, usuario.senha);
-      
-      // Fallback: caso a senha no banco ainda esteja em texto normal (dos nossos testes antigos)
       const senhaValidaNormal = usuario.senha === senha;
 
       if (!senhaValidaCriptografada && !senhaValidaNormal) {
@@ -53,14 +54,14 @@ export async function fazerLogin(formData: FormData) {
       }
     }
 
-    // Gera o Token de Acesso
+    // Gera o Token de Acesso JWT
     const secret = new TextEncoder().encode(JWT_SECRET);
-    const token = await new SignJWT({ email, role: usuario?.role || 'DIRETORIA' })
+    const token = await new SignJWT({ email, role: roleUsuario })
       .setProtectedHeader({ alg: "HS256" })
       .setExpirationTime("8h")
       .sign(secret);
 
-    // Salva o cookie
+    // Salva o cookie correto esperado pelo seu sistema
     const cookieStore = await cookies();
     cookieStore.set("fase_rh_token", token, {
       httpOnly: true,

@@ -16,19 +16,18 @@ function formatarData(dataBruta: string | number) {
   return dataStr; 
 }
 
-// AGORA O SERVIDOR RECEBE UM TEXTO SEGURO (JSON)
 export async function processarBancoDeDados(dadosJson: string) {
   let cadastrados = 0;
   let erros = 0;
+  let primeiroErro = ""; // Variável dedo-duro
 
   try {
-    // Desempacota o texto seguro de volta para a tabela original
     const linhas = JSON.parse(dadosJson);
 
-    // Percorre todos os funcionários (o cabeçalho e as linhas vazias já foram filtrados pela tela)
-    for (const linha of linhas) {
+    for (let i = 0; i < linhas.length; i++) {
+      const linha = linhas[i];
       try {
-        const matricula = linha[0] ? String(linha[0]).trim() : null; 
+        const matriculaStr = linha[0] ? String(linha[0]).trim() : null; 
         const nome = String(linha[1]).trim(); 
         const cargo = linha[2] ? String(linha[2]).trim() : null; 
         const vinculo = linha[3] ? String(linha[3]).trim() : "NÃO INFORMADO"; 
@@ -40,8 +39,8 @@ export async function processarBancoDeDados(dadosJson: string) {
           remuneracao = parseFloat(val) || 0;
         }
 
-        const rg = linha[23] ? String(linha[23]).trim() : null; 
-        const cpf = linha[24] ? String(linha[24]).trim() : null; 
+        const rgStr = linha[23] ? String(linha[23]).trim() : null; 
+        const cpfStr = linha[24] ? String(linha[24]).trim() : null; 
         const agencia = linha[25] ? String(linha[25]).trim() : null; 
         const conta = linha[26] ? String(linha[26]).trim() : null; 
         const banco = linha[27] ? String(linha[27]).trim() : null; 
@@ -55,11 +54,17 @@ export async function processarBancoDeDados(dadosJson: string) {
         const status = dataDesligamento ? "DESLIGADO" : "ATIVO";
 
         const servidorId = randomUUID();
+        const codigoAleatorio = servidorId.substring(0,6).toUpperCase();
+
+        // TRUQUE DE MESTRE: Se o funcionário não tiver Matrícula ou CPF, criamos um único para ele não travar o banco.
+        const matriculaSegura = matriculaStr || `GERAR-${codigoAleatorio}`;
+        const cpfSeguro = cpfStr || `SEM-CPF-${codigoAleatorio}`;
+        const rgSeguro = rgStr || `SEM-RG-${codigoAleatorio}`;
 
         // 1. Salvar Servidores
         await db.insert(servidores).values({
           id: servidorId,
-          matricula,
+          matricula: matriculaSegura,
           vinculo: vinculo as any,
           cargo,
           lotacao,
@@ -84,8 +89,8 @@ export async function processarBancoDeDados(dadosJson: string) {
         // 3. Salvar Documentos
         await db.insert(documentos).values({
           servidorId,
-          cpf: cpf || "NÃO INFORMADO",
-          rg: rg || "NÃO INFORMADO",
+          cpf: cpfSeguro,
+          rg: rgSeguro,
         } as any);
 
         // 4. Salvar Dados Bancários
@@ -100,16 +105,19 @@ export async function processarBancoDeDados(dadosJson: string) {
         }
 
         cadastrados++;
-      } catch (err) {
-        console.error(`Erro ao importar o funcionário:`, err);
+      } catch (err: any) {
+        // Guarda a mensagem exata do SQLite para te mostrar na tela
+        if (!primeiroErro) {
+          primeiroErro = err.message || String(err);
+          console.error(`Erro na linha ${i} (${linha[1]}):`, err);
+        }
         erros++;
       }
     }
 
-    return { sucesso: true, cadastrados, erros };
+    return { sucesso: true, cadastrados, erros, detalheErro: primeiroErro };
     
   } catch (error) {
-    console.error("Erro fatal ao desempacotar os dados:", error);
-    throw new Error("Falha no servidor ao ler o arquivo enviado.");
+    throw new Error("Falha geral ao ler os dados.");
   }
 }

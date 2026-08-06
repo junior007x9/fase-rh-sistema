@@ -8,7 +8,7 @@ import { processarBancoDeDados } from "../actions/importacao";
 
 export default function ImportacaoPage() {
   const [carregando, setCarregando] = useState(false);
-  const [resultado, setResultado] = useState<{ cadastrados: number, erros: number } | null>(null);
+  const [resultado, setResultado] = useState<{ cadastrados: number, erros: number, detalheErro?: string } | null>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -18,47 +18,39 @@ export default function ImportacaoPage() {
     setResultado(null);
 
     try {
-      // 1. Ler o arquivo
       const data = await file.arrayBuffer();
-      
-      // 2. Processar a planilha
       const workbook = XLSX.read(data, { type: "array" });
-      
-      // 3. Buscar a aba
       const nomeAba = "BANCO_DE_DADOS";
       const sheet = workbook.Sheets[nomeAba];
       
       if (!sheet) {
-        alert(`A aba "${nomeAba}" não foi encontrada no arquivo. Verifique o nome exato.`);
+        alert(`A aba "${nomeAba}" não foi encontrada no arquivo.`);
         setCarregando(false);
         return;
       }
 
-      // 4. Converte e já força as datas a ficarem no formato de texto certo
       const linhasBrutas: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, dateNF: 'dd/mm/yyyy' });
 
-      // 5. FILTRO DE LIMPEZA: Ignora o cabeçalho e remove qualquer linha vazia ou sem nome
       const linhasUteis = linhasBrutas.filter((linha, index) => {
-        // Pula a linha 0 (cabeçalho) e só aceita se tiver nome (coluna B / índice 1) preenchido
         return index > 0 && linha && linha.length > 1 && linha[1] && String(linha[1]).trim() !== "";
       });
 
       if (linhasUteis.length === 0) {
-        alert("A planilha parece estar vazia ou a coluna de Nomes (Coluna B) não foi encontrada.");
+        alert("A planilha parece estar vazia ou sem nomes.");
         setCarregando(false);
         return;
       }
 
-      console.log(`Enviando ${linhasUteis.length} funcionários para o banco de dados...`);
-
-      // 6. Enviar a versão "limpa" para o Backend processar
+      // Chama o backend enviando os dados empacotados
       const response = await processarBancoDeDados(JSON.stringify(linhasUteis));
       
-      setResultado({ cadastrados: response.cadastrados, erros: response.erros });
+      setResultado({ 
+        cadastrados: response.cadastrados, 
+        erros: response.erros,
+        detalheErro: response.detalheErro
+      });
 
     } catch (error: any) {
-      console.error("Erro detalhado ao ler o arquivo:", error);
-      // AGORA O SISTEMA VAI TE DIZER EXATAMENTE O QUE DEU ERRADO
       alert(`ERRO TÉCNICO: ${error.message || error}`);
     } finally {
       setCarregando(false);
@@ -78,16 +70,17 @@ export default function ImportacaoPage() {
           <div className="flex flex-col items-center space-y-4">
             <Loader2 size={48} className="text-blue-500 animate-spin" />
             <h3 className="text-xl font-bold text-gray-800">Processando Planilha...</h3>
-            <p className="text-gray-500">Isso pode levar até 10 segundos. Não feche a página.</p>
+            <p className="text-gray-500">Estamos salvando milhares de dados. Não feche a página, pode levar 1 minuto.</p>
           </div>
         ) : resultado ? (
-          <div className="flex flex-col items-center space-y-4">
+          <div className="flex flex-col items-center space-y-4 w-full">
             {resultado.erros === 0 ? (
               <CheckCircle size={56} className="text-green-500" />
             ) : (
               <AlertTriangle size={56} className="text-amber-500" />
             )}
             <h3 className="text-2xl font-bold text-gray-800">Importação Concluída!</h3>
+            
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 w-full max-w-sm">
               <p className="text-lg text-slate-700 flex justify-between">
                 <span className="font-bold">Servidores Cadastrados:</span> 
@@ -98,8 +91,17 @@ export default function ImportacaoPage() {
                 <span className="text-red-600 font-extrabold">{resultado.erros}</span>
               </p>
             </div>
+
+            {/* DEDO DURO: SE O BANCO RECUSAR, VAI APARECER AQUI O MOTIVO EXATO */}
+            {resultado.erros > 0 && resultado.detalheErro && (
+              <div className="mt-4 w-full max-w-lg bg-red-50 border border-red-200 p-4 rounded-lg text-left shadow-sm">
+                <p className="text-sm text-red-800 font-bold mb-1">Diagnóstico do Banco de Dados (Primeiro Erro):</p>
+                <p className="text-xs text-red-600 font-mono break-words">{resultado.detalheErro}</p>
+              </div>
+            )}
+
             <button onClick={() => setResultado(null)} className="mt-4 text-blue-600 font-bold hover:underline">
-              Importar outro arquivo
+              Tentar Novamente
             </button>
           </div>
         ) : (

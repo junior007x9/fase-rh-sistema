@@ -71,7 +71,6 @@ export default function LoginPage() {
                 className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all text-sm font-medium"
               />
             </div>
-            <p className="text-[11px] text-slate-400 mt-1.5">Primeiro acesso? Digite qualquer e-mail e a senha: <strong className="text-slate-600">fase2026</strong></p>
           </div>
 
           {erro && (

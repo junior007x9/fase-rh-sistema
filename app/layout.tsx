@@ -1,7 +1,7 @@
 // Arquivo: app/layout.tsx
 import "./globals.css";
 import Link from "next/link";
-import { getSessaoUsuario } from "./actions/auth"; // Valida o token JWT correto
+import { getSessaoUsuario } from "./actions/auth";
 import { 
   LayoutDashboard, Users, Briefcase, Calendar, 
   Clock, FileText, BarChart3, Shield, UserPlus, LogOut 
@@ -18,21 +18,21 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Verifica se existe uma sessão válida através do token JWT
   const sessao = await getSessaoUsuario();
   const logado = sessao !== null;
 
-  // Se não estiver logado, exibe exclusivamente a tela de login
+  // Se não estiver logado, exibe APENAS a página de login, sem menu lateral nem estrutura do sistema
   if (!logado) {
     return (
       <html lang="pt-BR">
-        <body className="bg-slate-900 text-slate-900 antialiased">
+        <body className="bg-slate-900 text-slate-900 antialiased m-0 p-0">
           <LoginPage />
         </body>
       </html>
     );
   }
 
+  // Se estiver logado, exibe o sistema completo com o menu lateral claro
   return (
     <html lang="pt-BR">
       <body className="bg-slate-100 text-slate-900 antialiased">

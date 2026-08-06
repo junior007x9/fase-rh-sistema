@@ -1,128 +1,145 @@
 // Arquivo: app/servidores/page.tsx
-import { db } from "../../db/index";
-import { servidores, dadosPessoais, documentos } from "../../db/schema";
-import { eq, desc } from "drizzle-orm";
+import { db } from "../db/index";
+import { servidores, dadosPessoais, documentos } from "../db/schema";
+import { eq, or, sql } from "drizzle-orm";
+import { Search, Plus, UserCheck, UserX, ChevronLeft, ChevronRight, Eye, Edit } from "lucide-react";
 import Link from "next/link";
-import { Plus, Users, Search, ChevronRight, BadgeCheck, AlertCircle, Pencil } from "lucide-react";
-import BotaoExcluir from "../components/BotaoExcluir";
-import { excluirServidor } from "../actions/servidores";
 
 export const dynamic = "force-dynamic";
 
-export default async function ServidoresPage() {
-  // Busca todos os servidores puxando os novos campos cargo e lotacao
+export default async function ServidoresPage({
+  searchParams,
+}: {
+  searchParams: { q?: string; pagina?: string }
+}) {
+  // 1. Controle de Busca e Paginação
+  const q = searchParams?.q || "";
+  const paginaAtual = Number(searchParams?.pagina) || 1;
+  const itensPorPagina = 15;
+  const offset = (paginaAtual - 1) * itensPorPagina;
+
+  // 2. Montar Filtros de Pesquisa
+  const buscaSQL = q ? `%${q.toLowerCase()}%` : null;
+  const condicoesDeBusca = buscaSQL
+    ? or(
+        sql`lower(${dadosPessoais.nome}) LIKE ${buscaSQL}`,
+        sql`${documentos.cpf} LIKE ${buscaSQL}`,
+        sql`lower(${servidores.matricula}) LIKE ${buscaSQL}`
+      )
+    : undefined;
+
+  // 3. Contar total de resultados (para a paginação saber até onde ir)
+  const [totalQuery] = await db.select({ count: sql<number>`count(*)` })
+    .from(servidores)
+    .leftJoin(dadosPessoais, eq(servidores.id, dadosPessoais.servidorId))
+    .leftJoin(documentos, eq(servidores.id, documentos.servidorId))
+    .where(condicoesDeBusca);
+  
+  const totalRegistros = totalQuery.count;
+  const totalPaginas = Math.ceil(totalRegistros / itensPorPagina) || 1;
+
+  // 4. Buscar apenas os 15 da página atual
   const listaServidores = await db.select({
     id: servidores.id,
     matricula: servidores.matricula,
+    nome: dadosPessoais.nome,
+    cpf: documentos.cpf,
     cargo: servidores.cargo,
     lotacao: servidores.lotacao,
-    vinculo: servidores.vinculo,
     status: servidores.status,
-    nome: dadosPessoais.nome,
-    cpf: documentos.cpf
   })
   .from(servidores)
   .leftJoin(dadosPessoais, eq(servidores.id, dadosPessoais.servidorId))
   .leftJoin(documentos, eq(servidores.id, documentos.servidorId))
-  .orderBy(desc(servidores.criadoEm));
+  .where(condicoesDeBusca)
+  .limit(itensPorPagina)
+  .offset(offset);
+
+  // 5. Função para manter a pesquisa ao trocar de página
+  const getPageUrl = (novaPagina: number) => {
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    params.set('pagina', novaPagina.toString());
+    return `?${params.toString()}`;
+  };
 
   return (
-    <div className="max-w-7xl mx-auto pb-12 space-y-6">
-      
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+    <div className="max-w-7xl mx-auto space-y-6 pb-12">
+      {/* CABEÇALHO E BARRA DE PESQUISA */}
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-            <Users className="text-blue-600" /> Servidores
-          </h1>
-          <p className="text-gray-500 mt-1">Gerencie os colaboradores da instituição.</p>
-        </div>
-        <Link 
-          href="/servidores/novo" 
-          className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm flex items-center gap-2"
-        >
-          <Plus size={18} /> Novo Servidor
-        </Link>
-      </header>
-
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100 flex items-center gap-2 text-gray-500">
-          <Search size={18} />
-          <input 
-            type="text" 
-            placeholder="Buscar por nome, matrícula, cargo ou CPF..." 
-            className="w-full bg-transparent outline-none text-sm"
-          />
+          <h1 className="text-2xl font-bold text-slate-800">Servidores</h1>
+          <p className="text-slate-500 text-sm mt-1">Gerencie os {totalRegistros} servidores cadastrados na base.</p>
         </div>
 
+        <div className="flex w-full md:w-auto items-center gap-3">
+          {/* O FORMULÁRIO "GET" ACIONA A BUSCA AUTOMATICAMENTE PELO NEXT.JS */}
+          <form method="GET" className="relative w-full md:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input
+              type="text"
+              name="q"
+              defaultValue={q}
+              placeholder="Buscar por nome, matrícula ou CPF..."
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
+            />
+            <button type="submit" className="hidden">Buscar</button>
+          </form>
+
+          <Link href="/servidores/novo" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-2 whitespace-nowrap shadow-sm">
+            <Plus size={18} /> Novo
+          </Link>
+        </div>
+      </div>
+
+      {/* TABELA DE SERVIDORES */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-gray-200">
-              <tr>
-                <th className="p-4">Matrícula</th>
-                <th className="p-4">Nome do Servidor</th>
-                <th className="p-4">Cargo / Lotação</th>
-                <th className="p-4">Vínculo</th>
-                <th className="p-4">Status</th>
-                <th className="p-4 text-right">Ações</th>
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 text-xs uppercase tracking-wider">
+                <th className="p-4 font-semibold">Nome / Matrícula</th>
+                <th className="p-4 font-semibold">Cargo / Lotação</th>
+                <th className="p-4 font-semibold">Status</th>
+                <th className="p-4 font-semibold text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-slate-100">
               {listaServidores.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-gray-500">
-                    Nenhum servidor cadastrado ainda.
+                  <td colSpan={4} className="p-8 text-center text-slate-500">
+                    Nenhum servidor encontrado para esta busca.
                   </td>
                 </tr>
               ) : (
                 listaServidores.map((srv) => (
                   <tr key={srv.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="p-4 font-mono text-slate-600 font-medium">
-                      {srv.matricula || <span className="text-gray-400 text-xs italic">Não gerada</span>}
+                    <td className="p-4">
+                      <div className="font-bold text-slate-800">{srv.nome}</div>
+                      <div className="text-xs text-slate-500 mt-0.5">Matrícula: {srv.matricula || 'N/A'} • CPF: {srv.cpf}</div>
                     </td>
                     <td className="p-4">
-                      <p className="font-bold text-gray-900">{srv.nome}</p>
-                      <p className="text-xs text-gray-500">CPF: {srv.cpf}</p>
+                      <div className="text-sm font-medium text-slate-700">{srv.cargo || 'Não Informado'}</div>
+                      <div className="text-xs text-slate-500 mt-0.5">{srv.lotacao || 'Não Informada'}</div>
                     </td>
                     <td className="p-4">
-                      <p className="font-semibold text-gray-800">{srv.cargo || "-"}</p>
-                      <p className="text-xs text-gray-500">{srv.lotacao || "-"}</p>
-                    </td>
-                    <td className="p-4 text-gray-600">{srv.vinculo}</td>
-                    <td className="p-4">
-                      {srv.status === "ATIVO" ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800">
-                          <BadgeCheck size={14} /> Ativo
+                      {srv.status === 'ATIVO' ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">
+                          <UserCheck size={14} /> Ativo
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800">
-                          <AlertCircle size={14} /> Desligado
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700">
+                          <UserX size={14} /> Desligado
                         </span>
                       )}
                     </td>
-                    <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Link 
-                          href={`/servidores/${srv.id}`}
-                          className="inline-flex items-center justify-center p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-semibold"
-                          title="Abrir Perfil Completo"
-                        >
-                          Perfil <ChevronRight size={16} className="ml-1" />
-                        </Link>
-                        
-                        <Link 
-                          href={`/servidores/${srv.id}/editar`}
-                          className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                          title="Editar Servidor"
-                        >
-                          <Pencil size={18} />
-                        </Link>
-                        
-                        <BotaoExcluir 
-                          id={srv.id} 
-                          nomeRegistro={srv.nome || "Servidor"} 
-                          acaoExcluir={excluirServidor as any} 
-                        />
-                      </div>
+                    <td className="p-4 flex items-center justify-end gap-2">
+                      <Link href={`/servidores/${srv.id}`} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                        <Eye size={18} />
+                      </Link>
+                      <Link href={`/servidores/${srv.id}/editar`} className="p-2 text-slate-400 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition-colors">
+                        <Edit size={18} />
+                      </Link>
                     </td>
                   </tr>
                 ))
@@ -130,6 +147,27 @@ export default async function ServidoresPage() {
             </tbody>
           </table>
         </div>
+
+        {/* CONTROLES DE PAGINAÇÃO */}
+        {totalPaginas > 1 && (
+          <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-slate-50">
+            <span className="text-sm text-slate-500">
+              Mostrando página <strong className="text-slate-800">{paginaAtual}</strong> de <strong className="text-slate-800">{totalPaginas}</strong>
+            </span>
+            <div className="flex gap-2">
+              {paginaAtual > 1 && (
+                <Link href={getPageUrl(paginaAtual - 1)} className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-100 transition-colors flex items-center gap-1">
+                  <ChevronLeft size={16} /> Anterior
+                </Link>
+              )}
+              {paginaAtual < totalPaginas && (
+                <Link href={getPageUrl(paginaAtual + 1)} className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-100 transition-colors flex items-center gap-1">
+                  Próxima <ChevronRight size={16} />
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

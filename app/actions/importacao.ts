@@ -11,46 +11,42 @@ function formatarData(dataBruta: string | number) {
   if (dataStr.includes('/')) {
     const partes = dataStr.split(' ')[0].split('/');
     if (partes.length === 3) {
-      // Ex: 24/09/2026 -> 2026-09-24
       return `${partes[2]}-${partes[1]}-${partes[0]}`;
     }
   }
-  return dataStr; // Retorna como veio se não entender
+  return dataStr; 
 }
 
 export async function processarBancoDeDados(linhas: any[][]) {
   let cadastrados = 0;
   let erros = 0;
 
-  // O loop começa em 1 para pular a linha 0 (Cabeçalho)
   for (let i = 1; i < linhas.length; i++) {
     const linha = linhas[i];
     
-    // Se a linha estiver vazia ou não tiver nome (Coluna B = índice 1), pula a linha.
     if (!linha || !linha[1]) continue;
 
     try {
-      // Mapeamento das colunas baseado nas letras que você mandou (A=0, B=1, C=2, etc.)
-      const matricula = linha[0] ? String(linha[0]).trim() : null; // A
-      const nome = String(linha[1]).trim(); // B
-      const cargo = linha[2] ? String(linha[2]).trim() : null; // C
-      const vinculo = linha[3] ? String(linha[3]).trim() : "NÃO INFORMADO"; // D
-      const lotacao = linha[4] ? String(linha[4]).trim() : null; // E
+      const matricula = linha[0] ? String(linha[0]).trim() : null; 
+      const nome = String(linha[1]).trim(); 
+      const cargo = linha[2] ? String(linha[2]).trim() : null; 
+      const vinculo = linha[3] ? String(linha[3]).trim() : "NÃO INFORMADO"; 
+      const lotacao = linha[4] ? String(linha[4]).trim() : null; 
 
       let remuneracao = 0;
-      if (linha[22]) { // W = Total
+      if (linha[22]) { 
         const val = String(linha[22]).replace(/[^\d,.-]/g, '').replace(',', '.');
         remuneracao = parseFloat(val) || 0;
       }
 
-      const rg = linha[23] ? String(linha[23]).trim() : null; // X
-      const cpf = linha[24] ? String(linha[24]).trim() : null; // Y
-      const agencia = linha[25] ? String(linha[25]).trim() : null; // Z
-      const conta = linha[26] ? String(linha[26]).trim() : null; // AA
-      const banco = linha[27] ? String(linha[27]).trim() : null; // AB
+      const rg = linha[23] ? String(linha[23]).trim() : null; 
+      const cpf = linha[24] ? String(linha[24]).trim() : null; 
+      const agencia = linha[25] ? String(linha[25]).trim() : null; 
+      const conta = linha[26] ? String(linha[26]).trim() : null; 
+      const banco = linha[27] ? String(linha[27]).trim() : null; 
 
-      const admissaoBruta = linha[29]; // AD
-      const desligamentoBruto = linha[30]; // AE
+      const admissaoBruta = linha[29]; 
+      const desligamentoBruto = linha[30]; 
       
       const dataAdmissao = admissaoBruta ? formatarData(admissaoBruta) : new Date().toISOString().split('T')[0];
       const dataDesligamento = desligamentoBruto ? formatarData(desligamentoBruto) : null;
@@ -72,22 +68,20 @@ export async function processarBancoDeDados(linhas: any[][]) {
         remuneracaoBase: remuneracao,
       });
 
-      // 2. Salvar na Tabela de Dados Pessoais
+      // 2. Salvar na Tabela de Dados Pessoais (Sem ID gerado, usa apenas o servidorId)
       await db.insert(dadosPessoais).values({
-        id: randomUUID(),
         servidorId,
         nome,
       });
 
-      // 3. Salvar Documentos
+      // 3. Salvar Documentos (Sem ID gerado, usa apenas o servidorId)
       await db.insert(documentos).values({
-        id: randomUUID(),
         servidorId,
         cpf,
         rg,
       });
 
-      // 4. Salvar Dados Bancários
+      // 4. Salvar Dados Bancários (Esta tabela possui ID)
       if (banco || agencia || conta) {
         await db.insert(dadosBancarios).values({
           id: randomUUID(),

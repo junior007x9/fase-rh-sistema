@@ -1,7 +1,7 @@
 // Arquivo: app/layout.tsx
 import "./globals.css";
 import Link from "next/link";
-import { cookies } from "next/headers";
+import { getSessaoUsuario } from "./actions/auth"; // Valida o token JWT correto
 import { 
   LayoutDashboard, Users, Briefcase, Calendar, 
   Clock, FileText, BarChart3, Shield, UserPlus, LogOut 
@@ -18,8 +18,9 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = await cookies();
-  const logado = cookieStore.get("fase_logado")?.value === "true";
+  // Verifica se existe uma sessão válida através do token JWT
+  const sessao = await getSessaoUsuario();
+  const logado = sessao !== null;
 
   // Se não estiver logado, exibe exclusivamente a tela de login
   if (!logado) {

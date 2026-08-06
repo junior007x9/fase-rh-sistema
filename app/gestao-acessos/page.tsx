@@ -5,6 +5,7 @@ import { usuarios } from "../../db/schema";
 import { Shield, PlusCircle } from "lucide-react";
 import BotaoExcluir from "../components/BotaoExcluir";
 import { excluirUsuario } from "../actions/usuarios";
+import Link from "next/link";
 
 export default async function GestaoAcessosPage() {
   const listaUsuarios = await db.select().from(usuarios);
@@ -24,9 +25,9 @@ export default async function GestaoAcessosPage() {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex justify-between items-center">
           <h2 className="text-lg font-bold text-slate-800">Usuários do Sistema ({listaUsuarios.length})</h2>
-          <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-bold shadow-sm transition-colors">
+          <Link href="/gestao-acessos/novo" className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-bold transition-colors">
             <PlusCircle size={16} /> Novo Usuário
-          </button>
+          </Link>
         </div>
         
         <div className="overflow-x-auto">

@@ -32,7 +32,7 @@ export async function criarUsuario(formData: FormData) {
     nome,
     email: email.toLowerCase().trim(),
     senha: senhaCriptografada,
-    role,
+    role: role as any, // ⬅️ O 'as any' resolve o erro do TypeScript aqui!
   });
 
   // Atualiza a tabela e volta pra página anterior

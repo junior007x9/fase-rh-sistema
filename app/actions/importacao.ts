@@ -77,17 +77,18 @@ export async function processarBancoDeDados(dadosJson: string) {
           const pisSeguro = `SEM-PIS-${codigoAleatorio}`;
 
           // Em vez de salvar um por um, guardamos na "caixa" (Array)
+          // Adicionamos o 'as any' no final para o TypeScript parar de encher!
           loteServidores.push({
             id: servidorId,
             matricula: matriculaSegura,
-            vinculo: vinculo as any,
+            vinculo: vinculo,
             cargo,
             lotacao,
             status,
             dataAdmissao,
             dataDesligamento,
             remuneracaoBase: remuneracao,
-          });
+          } as any);
 
           lotePessoais.push({
             servidorId,

@@ -3,7 +3,7 @@ import { db } from "../../db/index";
 import { servidores, dadosPessoais, lancamentosFolha } from "../../db/schema";
 import { eq } from "drizzle-orm";
 import Link from "next/link";
-import { Calculator, Calendar, Search, FileText, ChevronRight, AlertCircle, Banknote } from "lucide-react";
+import { Calculator, Calendar, Search, FileText, ChevronRight, ChevronLeft, AlertCircle, Banknote } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,7 @@ function formatarMoeda(valor: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
 }
 
-export default async function FolhaPagamentoPage({ searchParams }: { searchParams: Promise<{ mesAno?: string, busca?: string }> }) {
+export default async function FolhaPagamentoPage({ searchParams }: { searchParams: Promise<{ mesAno?: string, busca?: string, pagina?: string }> }) {
   const resolvedSearchParams = await searchParams;
   
   const dataAtual = new Date();
@@ -19,6 +19,10 @@ export default async function FolhaPagamentoPage({ searchParams }: { searchParam
   
   const mesAnoFiltro = resolvedSearchParams?.mesAno || mesAtualPadrao;
   const termoBusca = resolvedSearchParams?.busca || "";
+  
+  // PAGINAÇÃO - Configuração inicial
+  const paginaAtual = Number(resolvedSearchParams?.pagina) || 1;
+  const itensPorPagina = 20;
 
   // 1. Busca os Servidores Ativos
   const listaServidores = await db.select({
@@ -55,10 +59,35 @@ export default async function FolhaPagamentoPage({ searchParams }: { searchParam
     return (s.nome?.toLowerCase().includes(buscaLower) || s.matricula?.toLowerCase().includes(buscaLower));
   });
 
+  // ---------------------------------------------------------------------------
+  // LÓGICA DE PAGINAÇÃO NO ARRAY (Impede a tela de travar)
+  // ---------------------------------------------------------------------------
+  const totalRegistros = servidoresFiltrados.length;
+  const totalPaginas = Math.ceil(totalRegistros / itensPorPagina);
+  const offset = (paginaAtual - 1) * itensPorPagina;
+  
+  // Corta a lista para exibir apenas os 20 servidores da página atual
+  const servidoresPaginados = servidoresFiltrados.slice(offset, offset + itensPorPagina);
+
+  // Calcula o impacto total da folha para a empresa (Usando todos os filtrados para bater o valor real)
+  let totalGeralEmpresa = 0;
+  servidoresFiltrados.forEach(srv => {
+    const totaisSrv = totaisServidores[srv.id] || { proventos: 0, descontos: 0 };
+    const baseCalculo = mesAnoFiltro.startsWith('13') ? 0 : (srv.remuneracaoBase || 0);
+    const liquido = (baseCalculo + totaisSrv.proventos) - totaisSrv.descontos;
+    totalGeralEmpresa += liquido;
+  });
+
   const nomesMeses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
-  // Calcula o impacto total da folha para a empresa
-  let totalGeralEmpresa = 0;
+  // Helper para montar a URL da paginação sem perder a busca
+  const urlPaginacao = (novaPagina: number) => {
+    const params = new URLSearchParams();
+    if (termoBusca) params.set("busca", termoBusca);
+    if (mesAnoFiltro) params.set("mesAno", mesAnoFiltro);
+    params.set("pagina", String(novaPagina));
+    return `/folha?${params.toString()}`;
+  };
 
   return (
     <div className="max-w-7xl mx-auto pb-12 space-y-6">
@@ -102,7 +131,6 @@ export default async function FolhaPagamentoPage({ searchParams }: { searchParam
                     const valor = `${String(index + 1).padStart(2, '0')}-${ano}`;
                     return <option key={valor} value={valor}>{mes} / {ano}</option>
                   })}
-                  {/* NOVO: OPÇÃO DE 13º SALÁRIO */}
                   <option value={`13-${ano}`} className="font-bold text-emerald-700">13º Salário (Abono) / {ano}</option>
                 </optgroup>
               ))}
@@ -127,30 +155,27 @@ export default async function FolhaPagamentoPage({ searchParams }: { searchParam
           </span>
         </div>
         
-        {servidoresFiltrados.length === 0 ? (
+        {servidoresPaginados.length === 0 ? (
           <div className="p-8 text-center text-gray-500 flex flex-col items-center">
             <AlertCircle size={40} className="text-gray-300 mb-3" />
-            <p>Nenhum servidor ativo encontrado.</p>
+            <p>Nenhum servidor encontrado nesta página.</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
-            {servidoresFiltrados.map((srv) => {
-              // Pega o cálculo em memória, ou zera se não tiver lançamentos (Salario Base fica como provento padrão inicial se for folha normal)
+            {servidoresPaginados.map((srv) => {
               const totaisSrv = totaisServidores[srv.id] || { proventos: 0, descontos: 0 };
               
-              const baseCalculo = mesAnoFiltro.startsWith('13') ? 0 : (srv.remuneracaoBase || 0); // O 13º não joga o salário base bruto de graça.
+              const baseCalculo = mesAnoFiltro.startsWith('13') ? 0 : (srv.remuneracaoBase || 0);
               const totalProventosFinal = baseCalculo + totaisSrv.proventos;
               const liquido = totalProventosFinal - totaisSrv.descontos;
               
-              totalGeralEmpresa += liquido;
-
               return (
                 <div key={srv.id} className="p-4 hover:bg-emerald-50/50 transition-colors flex flex-col xl:flex-row items-center justify-between gap-6 group">
                   
                   {/* IDENTIFICAÇÃO */}
                   <div className="w-full xl:w-1/3 flex gap-3 items-center">
                     <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-600 flex-shrink-0">
-                      {srv.nome?.charAt(0)}
+                      {srv.nome?.charAt(0) || 'S'}
                     </div>
                     <div className="overflow-hidden">
                       <h3 className="font-bold text-gray-900 group-hover:text-emerald-700 transition-colors truncate">{srv.nome}</h3>
@@ -192,7 +217,45 @@ export default async function FolhaPagamentoPage({ searchParams }: { searchParam
                 </div>
               );
             })}
-            
+
+            {/* CONTROLES DE PAGINAÇÃO */}
+            {totalPaginas > 1 && (
+              <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-slate-50">
+                <p className="text-xs text-slate-500 font-medium">
+                  Mostrando página <strong className="text-slate-800">{paginaAtual}</strong> de <strong className="text-slate-800">{totalPaginas}</strong> 
+                  <span className="hidden sm:inline"> ({totalRegistros} servidores encontrados)</span>
+                </p>
+                
+                <div className="flex items-center gap-2">
+                  {paginaAtual > 1 ? (
+                    <Link 
+                      href={urlPaginacao(paginaAtual - 1)}
+                      className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-bold hover:bg-slate-50 hover:text-emerald-600 transition-colors flex items-center gap-1"
+                    >
+                      <ChevronLeft size={16} /> Anterior
+                    </Link>
+                  ) : (
+                    <button disabled className="px-4 py-2 bg-slate-100 border border-slate-200 text-slate-400 rounded-lg text-sm font-bold flex items-center gap-1 cursor-not-allowed">
+                      <ChevronLeft size={16} /> Anterior
+                    </button>
+                  )}
+
+                  {paginaAtual < totalPaginas ? (
+                    <Link 
+                      href={urlPaginacao(paginaAtual + 1)}
+                      className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-bold hover:bg-slate-50 hover:text-emerald-600 transition-colors flex items-center gap-1"
+                    >
+                      Próxima <ChevronRight size={16} />
+                    </Link>
+                  ) : (
+                    <button disabled className="px-4 py-2 bg-slate-100 border border-slate-200 text-slate-400 rounded-lg text-sm font-bold flex items-center gap-1 cursor-not-allowed">
+                      Próxima <ChevronRight size={16} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* RODAPÉ: TOTAL DA FOLHA */}
             <div className="p-4 bg-gray-100 border-t border-gray-200 flex justify-end items-center gap-4">
               <span className="text-sm font-bold text-gray-500 uppercase">Impacto Líquido Total da Folha:</span>

@@ -31,7 +31,9 @@ export default async function FolhaServidorPage({
   const [pessoal] = await db.select().from(dadosPessoais).where(eq(dadosPessoais.servidorId, servidorId));
   if (!srv || !pessoal) return <div>Servidor não encontrado.</div>;
 
-  const salarioBase = srv.remuneracaoBase || 0;
+  // 1. TRAVA DO 13º SALÁRIO: Se for 13º, o Salário Base contratual não entra como linha automática de 30 dias.
+  const isDecimoTerceiro = mesAno.startsWith('13');
+  const salarioBase = isDecimoTerceiro ? 0 : (srv.remuneracaoBase || 0);
 
   const lancamentos = await db.select()
     .from(lancamentosFolha)
@@ -39,10 +41,12 @@ export default async function FolhaServidorPage({
 
   let totalProventos = salarioBase;
   let totalDescontos = 0;
+  
   lancamentos.forEach(lan => {
     if (lan.tipo === "PROVENTO") totalProventos += lan.valorFinal;
     if (lan.tipo === "DESCONTO") totalDescontos += lan.valorFinal;
   });
+  
   const salarioLiquido = totalProventos - totalDescontos;
 
   return (
@@ -159,7 +163,9 @@ export default async function FolhaServidorPage({
           <div className="h-8 w-px bg-gray-300 mx-1"></div>
           <BotaoImprimirContracheque 
             servidor={{ nome: pessoal.nome || "", matricula: srv.matricula, cargo: srv.cargo, lotacao: srv.lotacao }}
-            mesAno={mesAno} salarioBase={salarioBase} lancamentos={lancamentos}
+            mesAno={mesAno} 
+            salarioBase={salarioBase} 
+            lancamentos={lancamentos}
             totais={{ proventos: totalProventos, descontos: totalDescontos, liquido: salarioLiquido }}
           />
         </div>
@@ -251,32 +257,45 @@ export default async function FolhaServidorPage({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 bg-white">
-                <tr className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-center text-gray-500">001</td>
-                  <td className="px-4 py-3 font-semibold text-gray-800">Salário Base</td>
-                  <td className="px-4 py-3 text-center text-gray-500">30d</td>
-                  <td className="px-4 py-3 text-right font-medium text-green-700">{formatarMoeda(salarioBase)}</td>
-                  <td className="px-4 py-3 text-right text-gray-400">-</td>
-                  <td className="px-2 py-3"></td>
-                </tr>
-                {lancamentos.map(lan => (
-                  <tr key={lan.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-center text-gray-500">{lan.codigoEvento}</td>
-                    <td className="px-4 py-3 text-gray-800">{lan.descricaoEvento}</td>
-                    <td className="px-4 py-3 text-center text-gray-500">{lan.quantidadeReferencia || '-'}</td>
-                    <td className="px-4 py-3 text-right font-medium text-green-700">
-                      {lan.tipo === 'PROVENTO' ? formatarMoeda(lan.valorFinal) : '-'}
-                    </td>
-                    <td className="px-4 py-3 text-right font-medium text-red-700">
-                      {lan.tipo === 'DESCONTO' ? formatarMoeda(lan.valorFinal) : '-'}
-                    </td>
-                    <td className="px-2 py-3 text-center">
-                      <form action={async () => { "use server"; await excluirLancamentoFolha(lan.id, servidorId); }}>
-                        <button type="submit" className="text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
-                      </form>
-                    </td>
+                
+                {/* Linha do Salário Base (Some se for competência de 13º Salário) */}
+                {!isDecimoTerceiro && (
+                  <tr className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-center text-gray-500">001</td>
+                    <td className="px-4 py-3 font-semibold text-gray-800">Salário Base</td>
+                    <td className="px-4 py-3 text-center text-gray-500">30d</td>
+                    <td className="px-4 py-3 text-right font-medium text-green-700">{formatarMoeda(salarioBase)}</td>
+                    <td className="px-4 py-3 text-right text-gray-400">-</td>
+                    <td className="px-2 py-3"></td>
                   </tr>
-                ))}
+                )}
+
+                {/* Eventos Lançados (Férias, 13º, Adicionais, Faltas, etc) */}
+                {lancamentos.map(lan => {
+                  // Ação segura para o Next.js dentro do .map() usando bind
+                  const excluirAction = excluirLancamentoFolha.bind(null, lan.id, servidorId);
+                  
+                  return (
+                    <tr key={lan.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-center text-gray-500">{lan.codigoEvento}</td>
+                      <td className="px-4 py-3 text-gray-800">{lan.descricaoEvento}</td>
+                      <td className="px-4 py-3 text-center text-gray-500">{lan.quantidadeReferencia || '-'}</td>
+                      <td className="px-4 py-3 text-right font-medium text-green-700">
+                        {lan.tipo === 'PROVENTO' ? formatarMoeda(lan.valorFinal) : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium text-red-700">
+                        {lan.tipo === 'DESCONTO' ? formatarMoeda(lan.valorFinal) : '-'}
+                      </td>
+                      <td className="px-2 py-3 text-center">
+                        <form action={excluirAction}>
+                          <button type="submit" className="text-gray-300 hover:text-red-500 transition-colors">
+                            <Trash2 size={16} />
+                          </button>
+                        </form>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
 

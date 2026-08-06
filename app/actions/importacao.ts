@@ -8,6 +8,7 @@ import {
   periodosAquisitivos, eventosAusencia, lancamentosFolha
 } from "../../db/schema";
 import { randomUUID } from "crypto";
+import { revalidatePath } from "next/cache"; // Importante para a tela atualizar sozinha
 
 function formatarData(dataBruta: string | number) {
   const dataStr = String(dataBruta).trim();
@@ -18,6 +19,22 @@ function formatarData(dataBruta: string | number) {
     }
   }
   return dataStr; 
+}
+
+// NOVA FUNÇÃO: Transforma "1.500,50" ou "R$ 1.500,50" em 1500.50 perfeito pro banco
+function converterMoeda(valorCSV: any) {
+  if (!valorCSV) return 0;
+  if (typeof valorCSV === 'number') return valorCSV;
+  
+  const texto = String(valorCSV).trim();
+  if (texto === "") return 0;
+  
+  const valorLimpo = texto
+    .replace(/[R$\s]/g, '') // Remove o "R$" e espaços
+    .replace(/\./g, '')     // Remove os pontos de milhar (Ex: 1.500 vira 1500)
+    .replace(',', '.');     // Troca a vírgula dos centavos por ponto (Ex: 1500,50 vira 1500.50)
+
+  return parseFloat(valorLimpo) || 0;
 }
 
 export async function processarBancoDeDados(dadosJson: string) {
@@ -46,11 +63,8 @@ export async function processarBancoDeDados(dadosJson: string) {
           const vinculo = linha[3] ? String(linha[3]).trim() : "NÃO INFORMADO"; 
           const lotacao = linha[4] ? String(linha[4]).trim() : null; 
 
-          let remuneracao = 0;
-          if (linha[22]) { 
-            const val = String(linha[22]).replace(/[^\d,.-]/g, '').replace(',', '.');
-            remuneracao = parseFloat(val) || 0;
-          }
+          // ✅ CORRIGIDO: Agora usa a função conversora para não quebrar os valores
+          const remuneracao = converterMoeda(linha[22]);
 
           const rgStr = linha[23] ? String(linha[23]).trim() : null; 
           const cpfStr = linha[24] ? String(linha[24]).trim() : null; 
@@ -134,6 +148,10 @@ export async function processarBancoDeDados(dadosJson: string) {
       cadastrados += loteServidores.length;
     }
 
+    // Atualiza o cache do Next.js para refletir imediatamente na tela
+    revalidatePath("/servidores");
+    revalidatePath("/folha");
+
     return { sucesso: true, cadastrados, erros, detalheErro: primeiroErro };
     
   } catch (error: any) {
@@ -141,7 +159,7 @@ export async function processarBancoDeDados(dadosJson: string) {
   }
 }
 
-// NOVA FUNÇÃO: ZERAR BANCO DE DADOS
+// FUNÇÃO PARA ZERAR BANCO DE DADOS
 export async function zerarBancoDeDados() {
   try {
     // Apaga as tabelas dependentes (filhas) primeiro para não dar erro de chave
@@ -157,6 +175,10 @@ export async function zerarBancoDeDados() {
     
     // Apaga a tabela principal de servidores
     await db.delete(servidores);
+
+    // Atualiza o cache para esvaziar a tela na hora
+    revalidatePath("/servidores");
+    revalidatePath("/folha");
 
     return { sucesso: true };
   } catch (error: any) {

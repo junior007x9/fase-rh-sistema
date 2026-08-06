@@ -18,33 +18,48 @@ export default function ImportacaoPage() {
     setResultado(null);
 
     try {
-      // 1. Ler o arquivo usando o FileReader
+      // 1. Ler o arquivo
       const data = await file.arrayBuffer();
       
-      // 2. Processar a planilha usando a biblioteca xlsx
+      // 2. Processar a planilha
       const workbook = XLSX.read(data, { type: "array" });
       
-      // 3. Buscar a aba exata do Banco de Dados
+      // 3. Buscar a aba
       const nomeAba = "BANCO_DE_DADOS";
       const sheet = workbook.Sheets[nomeAba];
       
       if (!sheet) {
-        alert(`A aba "${nomeAba}" não foi encontrada no arquivo. Verifique se o nome está exato.`);
+        alert(`A aba "${nomeAba}" não foi encontrada no arquivo. Verifique o nome exato.`);
         setCarregando(false);
         return;
       }
 
-      // 4. Converter a aba para uma Matriz (Array de Arrays) mantendo as datas formatadas como texto
-      const linhas: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, dateNF: 'dd/mm/yyyy' });
+      // 4. Converte e já força as datas a ficarem no formato de texto certo
+      const linhasBrutas: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, dateNF: 'dd/mm/yyyy' });
 
-      // 5. Enviar para a Action no Backend processar
-      const response = await processarBancoDeDados(linhas);
+      // 5. FILTRO DE LIMPEZA: Ignora o cabeçalho e remove qualquer linha vazia ou sem nome
+      const linhasUteis = linhasBrutas.filter((linha, index) => {
+        // Pula a linha 0 (cabeçalho) e só aceita se tiver nome (coluna B / índice 1) preenchido
+        return index > 0 && linha && linha.length > 1 && linha[1] && String(linha[1]).trim() !== "";
+      });
+
+      if (linhasUteis.length === 0) {
+        alert("A planilha parece estar vazia ou a coluna de Nomes (Coluna B) não foi encontrada.");
+        setCarregando(false);
+        return;
+      }
+
+      console.log(`Enviando ${linhasUteis.length} funcionários para o banco de dados...`);
+
+      // 6. Enviar a versão "limpa" para o Backend processar
+      const response = await processarBancoDeDados(linhasUteis);
       
       setResultado({ cadastrados: response.cadastrados, erros: response.erros });
 
-    } catch (error) {
-      console.error("Erro ao ler o arquivo:", error);
-      alert("Houve um problema ao ler o arquivo. Certifique-se de que é um formato suportado (.ods ou .xlsx).");
+    } catch (error: any) {
+      console.error("Erro detalhado ao ler o arquivo:", error);
+      // AGORA O SISTEMA VAI TE DIZER EXATAMENTE O QUE DEU ERRADO
+      alert(`ERRO TÉCNICO: ${error.message || error}`);
     } finally {
       setCarregando(false);
     }
@@ -63,7 +78,7 @@ export default function ImportacaoPage() {
           <div className="flex flex-col items-center space-y-4">
             <Loader2 size={48} className="text-blue-500 animate-spin" />
             <h3 className="text-xl font-bold text-gray-800">Processando Planilha...</h3>
-            <p className="text-gray-500">Estamos lendo o arquivo e salvando os servidores no banco de dados. Isso pode levar alguns segundos.</p>
+            <p className="text-gray-500">Isso pode levar até 10 segundos. Não feche a página.</p>
           </div>
         ) : resultado ? (
           <div className="flex flex-col items-center space-y-4">
@@ -93,10 +108,10 @@ export default function ImportacaoPage() {
               <UploadCloud size={48} className="text-blue-600" />
             </div>
             <h3 className="text-xl font-bold text-gray-800 mb-2">Importar Aba "BANCO_DE_DADOS"</h3>
-            <p className="text-gray-500 mb-6 max-w-md">O sistema irá ler a coluna A até a AE para criar o cadastro completo, dados bancários e remuneração base dos servidores.</p>
+            <p className="text-gray-500 mb-6 max-w-md">O sistema irá ler a planilha e criar os servidores automaticamente filtrando linhas em branco.</p>
             
             <label className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white px-8 py-3 rounded-lg font-bold shadow-md transition-colors">
-              Selecionar Planilha (.ods)
+              Selecionar Planilha (.ods / .xlsx)
               <input type="file" accept=".ods, .xlsx" className="hidden" onChange={handleFileUpload} />
             </label>
           </>

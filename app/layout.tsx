@@ -87,10 +87,12 @@ export default async function RootLayout({
             </div>
 
             {/* Rodapé do Menu */}
+            {/* Rodapé do Menu */}
             <div className="p-3 border-t border-slate-100">
-              <Link href="/sair" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-600 hover:bg-red-50 transition-colors text-sm font-medium">
+              {/* Mudamos de Link para tag <a> para forçar recarregamento limpo */}
+              <a href="/sair" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-600 hover:bg-red-50 transition-colors text-sm font-medium">
                 <LogOut size={18} /> Sair / Desconectar
-              </Link>
+              </a>
             </div>
           </aside>
 

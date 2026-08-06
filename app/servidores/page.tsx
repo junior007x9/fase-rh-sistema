@@ -2,8 +2,9 @@
 import { db } from "../../db/index";
 import { servidores, dadosPessoais, documentos } from "../../db/schema";
 import { eq, or, sql } from "drizzle-orm";
-import { Search, Plus, UserCheck, UserX, ChevronLeft, ChevronRight, Eye, Edit } from "lucide-react";
+import { Plus, UserCheck, UserX, ChevronLeft, ChevronRight, Eye, Edit } from "lucide-react";
 import Link from "next/link";
+import LiveSearch from "../components/LiveSearch"; // Importando a mágica aqui
 
 export const dynamic = "force-dynamic";
 
@@ -12,14 +13,12 @@ export default async function ServidoresPage({
 }: {
   searchParams: any
 }) {
-  // 1. Controle de Busca e Paginação (Garante compatibilidade com Next.js mais recentes)
   const params = await Promise.resolve(searchParams);
   const q = params?.q || "";
   const paginaAtual = Number(params?.pagina) || 1;
   const itensPorPagina = 15;
   const offset = (paginaAtual - 1) * itensPorPagina;
 
-  // 2. Montar Filtros de Pesquisa
   const buscaSQL = q ? `%${q.toLowerCase()}%` : null;
   const condicoesDeBusca = buscaSQL
     ? or(
@@ -29,7 +28,6 @@ export default async function ServidoresPage({
       )
     : undefined;
 
-  // 3. Contar total de resultados (para a paginação saber até onde ir)
   const [totalQuery] = await db.select({ count: sql<number>`count(*)` })
     .from(servidores)
     .leftJoin(dadosPessoais, eq(servidores.id, dadosPessoais.servidorId))
@@ -39,7 +37,6 @@ export default async function ServidoresPage({
   const totalRegistros = totalQuery.count;
   const totalPaginas = Math.ceil(totalRegistros / itensPorPagina) || 1;
 
-  // 4. Buscar apenas os 15 da página atual
   const listaServidores = await db.select({
     id: servidores.id,
     matricula: servidores.matricula,
@@ -56,7 +53,6 @@ export default async function ServidoresPage({
   .limit(itensPorPagina)
   .offset(offset);
 
-  // 5. Função para manter a pesquisa ao trocar de página
   const getPageUrl = (novaPagina: number) => {
     const p = new URLSearchParams();
     if (q) p.set('q', q);
@@ -66,7 +62,6 @@ export default async function ServidoresPage({
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12">
-      {/* CABEÇALHO E BARRA DE PESQUISA */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col lg:flex-row justify-between items-center gap-4">
         <div className="w-full lg:w-auto text-center lg:text-left">
           <h1 className="text-2xl font-bold text-slate-800">Servidores</h1>
@@ -74,22 +69,11 @@ export default async function ServidoresPage({
         </div>
 
         <div className="flex w-full lg:w-auto flex-col sm:flex-row items-center gap-3">
-          {/* AGORA COM BOTÃO VISÍVEL E ACTION CORRETA */}
-          <form method="GET" action="/servidores" className="flex items-center w-full sm:w-[400px] gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input
-                type="text"
-                name="q"
-                defaultValue={q}
-                placeholder="Buscar por nome, matrícula ou CPF..."
-                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
-              />
-            </div>
-            <button type="submit" className="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors border border-slate-800 shadow-sm">
-              Buscar
-            </button>
-          </form>
+          
+          {/* SUBSTITUÍMOS O FORMULÁRIO ANTIGO PELO NOSSO NOVO COMPONENTE */}
+          <div className="w-full sm:w-[400px]">
+            <LiveSearch paramName="q" defaultValue={q} placeholder="Buscar por nome, matrícula ou CPF..." />
+          </div>
 
           <Link href="/servidores/novo" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2 w-full sm:w-auto shadow-sm">
             <Plus size={18} /> Novo
@@ -97,7 +81,6 @@ export default async function ServidoresPage({
         </div>
       </div>
 
-      {/* TABELA DE SERVIDORES */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -153,7 +136,6 @@ export default async function ServidoresPage({
           </table>
         </div>
 
-        {/* CONTROLES DE PAGINAÇÃO */}
         {totalPaginas > 1 && (
           <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-slate-50">
             <span className="text-sm text-slate-500">

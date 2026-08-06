@@ -19,7 +19,7 @@ function formatarData(dataBruta: string | number) {
 export async function processarBancoDeDados(dadosJson: string) {
   let cadastrados = 0;
   let erros = 0;
-  let primeiroErro = ""; // Variável dedo-duro
+  let primeiroErro = ""; 
 
   try {
     const linhas = JSON.parse(dadosJson);
@@ -30,7 +30,7 @@ export async function processarBancoDeDados(dadosJson: string) {
         const matriculaStr = linha[0] ? String(linha[0]).trim() : null; 
         const nome = String(linha[1]).trim(); 
         const cargo = linha[2] ? String(linha[2]).trim() : null; 
-        const vinculo = linha[3] ? String(linha[3]).trim() : "NÃO INFORMADO"; 
+        const vinculo = linha[3] ? String(linha[3]).trim() : "NAO_INFORMADO"; 
         const lotacao = linha[4] ? String(linha[4]).trim() : null; 
 
         let remuneracao = 0;
@@ -56,7 +56,6 @@ export async function processarBancoDeDados(dadosJson: string) {
         const servidorId = randomUUID();
         const codigoAleatorio = servidorId.substring(0,6).toUpperCase();
 
-        // TRUQUE DE MESTRE: Se o funcionário não tiver Matrícula ou CPF, criamos um único para ele não travar o banco.
         const matriculaSegura = matriculaStr || `GERAR-${codigoAleatorio}`;
         const cpfSeguro = cpfStr || `SEM-CPF-${codigoAleatorio}`;
         const rgSeguro = rgStr || `SEM-RG-${codigoAleatorio}`;
@@ -74,16 +73,19 @@ export async function processarBancoDeDados(dadosJson: string) {
           remuneracaoBase: remuneracao,
         });
 
-        // 2. Salvar Dados Pessoais
+        // 2. Salvar Dados Pessoais (Agora PREENCHENDO TUDO EXATAMENTE COMO O BANCO EXIGIU NO ERRO)
         await db.insert(dadosPessoais).values({
           servidorId,
           nome,
+          nomeSocial: "",
           dataNascimento: "1900-01-01", 
-          grupoEtnico: "NÃO INFORMADO",
-          estadoCivil: "NÃO INFORMADO",
-          genero: "NÃO INFORMADO",
-          nomeMae: "NÃO INFORMADO",
-          nacionalidade: "NÃO INFORMADA"
+          tipoSanguineo: "NAO_INFORMADO",
+          grupoEtnico: "NAO_INFORMADO",
+          estadoCivil: "NAO_INFORMADO",
+          genero: "NAO_INFORMADO",
+          orientacaoSexual: "NAO_INFORMADO",
+          email: "",
+          telefone: ""
         } as any);
 
         // 3. Salvar Documentos
@@ -106,10 +108,8 @@ export async function processarBancoDeDados(dadosJson: string) {
 
         cadastrados++;
       } catch (err: any) {
-        // Guarda a mensagem exata do SQLite para te mostrar na tela
         if (!primeiroErro) {
           primeiroErro = err.message || String(err);
-          console.error(`Erro na linha ${i} (${linha[1]}):`, err);
         }
         erros++;
       }

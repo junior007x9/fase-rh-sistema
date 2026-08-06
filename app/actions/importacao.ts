@@ -73,7 +73,7 @@ export async function processarBancoDeDados(dadosJson: string) {
           remuneracaoBase: remuneracao,
         });
 
-        // 2. Salvar Dados Pessoais (Agora PREENCHENDO TUDO EXATAMENTE COMO O BANCO EXIGIU NO ERRO)
+        // 2. Salvar Dados Pessoais
         await db.insert(dadosPessoais).values({
           servidorId,
           nome,
@@ -88,20 +88,22 @@ export async function processarBancoDeDados(dadosJson: string) {
           telefone: ""
         } as any);
 
-        // 3. Salvar Documentos
+        // 3. Salvar Documentos (AGORA PREENCHENDO TÍTULO E PIS)
         await db.insert(documentos).values({
           servidorId,
           cpf: cpfSeguro,
           rg: rgSeguro,
+          tituloEleitoral: "",
+          pisPasep: ""
         } as any);
 
-        // 4. Salvar Dados Bancários
+        // 4. Salvar Dados Bancários (BLINDADO CONTRA NULL)
         if (banco || agencia || conta) {
           await db.insert(dadosBancarios).values({
             servidorId,
-            banco,
-            agencia,
-            conta,
+            banco: banco || "",
+            agencia: agencia || "",
+            conta: conta || "",
             nomeTitular: nome
           } as any);
         }

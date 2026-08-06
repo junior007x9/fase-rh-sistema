@@ -18,12 +18,24 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
   const [pessoal] = await db.select().from(dadosPessoais).where(eq(dadosPessoais.servidorId, servidorId));
   const [docs] = await db.select().from(documentos).where(eq(documentos.servidorId, servidorId));
 
-  // Busca as opções de cargos e lotações do banco
-  const listaCargos = await db.select().from(cargos);
-  const listaLotacoes = await db.select().from(lotacoes);
-
   if (!servidorBase || !pessoal || !docs) {
     redirect("/servidores");
+  }
+
+  // 1. SEGURANÇA: Busca cargos da tabela oficial ou extrai dos servidores se estiver vazia
+  let listaCargos = await db.select().from(cargos);
+  if (listaCargos.length === 0) {
+    const todosCargos = await db.select({ cargo: servidores.cargo }).from(servidores);
+    const cargosUnicos = Array.from(new Set(todosCargos.map(s => s.cargo).filter(Boolean))) as string[];
+    listaCargos = cargosUnicos.map((nome, index) => ({ id: String(index), nome, descricao: null, criadoEm: null }));
+  }
+
+  // 2. SEGURANÇA: Busca lotações da tabela oficial ou extrai dos servidores se estiver vazia
+  let listaLotacoes = await db.select().from(lotacoes);
+  if (listaLotacoes.length === 0) {
+    const todasLotacoes = await db.select({ lotacao: servidores.lotacao }).from(servidores);
+    const lotacoesUnicas = Array.from(new Set(todasLotacoes.map(s => s.lotacao).filter(Boolean))) as string[];
+    listaLotacoes = lotacoesUnicas.map((nome, index) => ({ id: String(index), nome, sigla: "", criadoEm: null }));
   }
 
   return (
@@ -56,23 +68,23 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
               <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Nome Completo *</label>
-              <input type="text" name="nome" defaultValue={pessoal.nome || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700" />
+              <input type="text" name="nome" defaultValue={pessoal.nome || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700 font-medium" />
             </div>
             <div className="md:col-span-2">
               <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Nome Social (Opcional)</label>
-              <input type="text" name="nomeSocial" defaultValue={pessoal.nomeSocial || ""} className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700" />
+              <input type="text" name="nomeSocial" defaultValue={pessoal.nomeSocial || ""} className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700" />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Data de Nascimento *</label>
-              <input type="date" name="dataNascimento" defaultValue={pessoal.dataNascimento || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700" />
+              <input type="date" name="dataNascimento" defaultValue={pessoal.dataNascimento || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700" />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Telefone *</label>
-              <input type="text" name="telefone" defaultValue={pessoal.telefone || ""} required placeholder="(00) 00000-0000" className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700" />
+              <input type="text" name="telefone" defaultValue={pessoal.telefone || ""} required placeholder="(00) 00000-0000" className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700" />
             </div>
             <div className="md:col-span-2">
               <label className="block text-xs font-bold text-slate-700 uppercase mb-2">E-mail Profissional ou Pessoal *</label>
-              <input type="email" name="email" defaultValue={pessoal.email || ""} required placeholder="email@exemplo.com" className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700" />
+              <input type="email" name="email" defaultValue={pessoal.email || ""} required placeholder="email@exemplo.com" className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700" />
             </div>
           </div>
         </section>
@@ -86,19 +98,19 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-2">CPF *</label>
-              <input type="text" name="cpf" defaultValue={docs.cpf || ""} required placeholder="000.000.000-00" className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700" />
+              <input type="text" name="cpf" defaultValue={docs.cpf || ""} required placeholder="000.000.000-00" className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700" />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-2">RG *</label>
-              <input type="text" name="rg" defaultValue={docs.rg || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700" />
+              <input type="text" name="rg" defaultValue={docs.rg || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700" />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Título Eleitoral *</label>
-              <input type="text" name="tituloEleitoral" defaultValue={docs.tituloEleitoral || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700" />
+              <input type="text" name="tituloEleitoral" defaultValue={docs.tituloEleitoral || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700" />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-2">PIS/PASEP (Opcional)</label>
-              <input type="text" name="pisPasep" defaultValue={docs.pisPasep || ""} className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700" />
+              <input type="text" name="pisPasep" defaultValue={docs.pisPasep || ""} className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700" />
             </div>
           </div>
         </section>
@@ -112,7 +124,7 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Gênero *</label>
-              <select name="genero" defaultValue={pessoal.genero || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700">
+              <select name="genero" defaultValue={pessoal.genero || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700">
                 <option value="MASCULINO_CISGENERO">Masculino Cisgênero</option>
                 <option value="FEMININO_CISGENERO">Feminino Cisgênero</option>
                 <option value="MASCULINO_TRANSGENERO">Masculino Transgênero</option>
@@ -124,7 +136,7 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Orientação Sexual *</label>
-              <select name="orientacaoSexual" defaultValue={pessoal.orientacaoSexual || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700">
+              <select name="orientacaoSexual" defaultValue={pessoal.orientacaoSexual || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700">
                 <option value="HETEROSSEXUAL">Heterossexual</option>
                 <option value="HOMOSSEXUAL">Homossexual</option>
                 <option value="BISSEXUAL">Bissexual</option>
@@ -134,7 +146,7 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Cor/Etnia *</label>
-              <select name="grupoEtnico" defaultValue={pessoal.grupoEtnico || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700">
+              <select name="grupoEtnico" defaultValue={pessoal.grupoEtnico || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700">
                 <option value="BRANCA">Branca</option>
                 <option value="PRETA">Preta</option>
                 <option value="PARDA">Parda</option>
@@ -145,7 +157,7 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Estado Civil *</label>
-              <select name="estadoCivil" defaultValue={pessoal.estadoCivil || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700">
+              <select name="estadoCivil" defaultValue={pessoal.estadoCivil || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700">
                 <option value="SOLTEIRO">Solteiro(a)</option>
                 <option value="CASADO">Casado(a)</option>
                 <option value="DIVORCIADO">Divorciado(a)</option>
@@ -155,7 +167,7 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Tipo Sanguíneo (Opcional)</label>
-              <select name="tipoSanguineo" defaultValue={pessoal.tipoSanguineo || ""} className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700">
+              <select name="tipoSanguineo" defaultValue={pessoal.tipoSanguineo || ""} className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700">
                 <option value="">Não informado</option>
                 <option value="A+">A+</option><option value="A-">A-</option>
                 <option value="B+">B+</option><option value="B-">B-</option>
@@ -166,7 +178,7 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
           </div>
         </section>
 
-        {/* SESSÃO 4: VÍNCULO INSTITUCIONAL E BASE SALARIAL (DADOS DA FOLHA) */}
+        {/* SESSÃO 4: VÍNCULO INSTITUCIONAL E BASE SALARIAL */}
         <section className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm">
           <div className="flex items-center gap-2 border-b border-slate-100 pb-4 mb-6">
             <div className="p-2 bg-blue-50 rounded-lg text-blue-600"><Briefcase size={20} /></div>
@@ -174,38 +186,44 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             
-            {/* Linha 1 */}
+            {/* Matrícula */}
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Matrícula *</label>
-              <input type="text" name="matricula" defaultValue={servidorBase.matricula || ""} required placeholder="Ex: 123456" className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700" />
+              <input type="text" name="matricula" defaultValue={servidorBase.matricula || ""} required placeholder="Ex: C1679" className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700 font-semibold" />
             </div>
+
+            {/* Vínculo */}
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Tipo de Vínculo *</label>
-              <select name="vinculo" defaultValue={servidorBase.vinculo || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700">
+              <select name="vinculo" defaultValue={servidorBase.vinculo || "EFETIVO"} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700">
                 <option value="EFETIVO">Efetivo</option>
                 <option value="CONTRATADO">Contratado</option>
                 <option value="COMISSIONADO">Comissionado</option>
                 <option value="ESTAGIARIO">Estagiário</option>
               </select>
             </div>
+
+            {/* Data de Admissão */}
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Data de Admissão *</label>
-              <input type="date" name="dataAdmissao" defaultValue={servidorBase.dataAdmissao || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700" />
+              <input type="date" name="dataAdmissao" defaultValue={servidorBase.dataAdmissao || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700 font-semibold" />
             </div>
             
-            {/* Linha 2 (Cargos e Lotação) */}
+            {/* Cargo */}
             <div className="md:col-span-1">
               <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Cargo *</label>
-              <select name="cargo" defaultValue={servidorBase.cargo || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700">
+              <select name="cargo" defaultValue={servidorBase.cargo || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700 font-semibold">
                 <option value="">Selecione um cargo...</option>
                 {listaCargos.map((c) => (
                   <option key={c.id} value={c.nome}>{c.nome}</option>
                 ))}
               </select>
             </div>
+
+            {/* Lotação */}
             <div className="md:col-span-2">
               <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Lotação (Setor/Secretaria) *</label>
-              <select name="lotacao" defaultValue={servidorBase.lotacao || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700">
+              <select name="lotacao" defaultValue={servidorBase.lotacao || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700 font-semibold">
                 <option value="">Selecione uma lotação...</option>
                 {listaLotacoes.map((l) => (
                   <option key={l.id} value={l.nome}>{l.nome}</option>
@@ -213,17 +231,18 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
               </select>
             </div>
 
-            {/* Linha 3 (Folha de Pagamento) */}
+            {/* Função */}
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Função (Opcional)</label>
-              <input type="text" name="funcao" defaultValue={servidorBase.funcao || ""} placeholder="Ex: Diretor(a)" className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700" />
+              <input type="text" name="funcao" defaultValue={servidorBase.funcao || ""} placeholder="Ex: Diretor(a)" className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700" />
             </div>
             
+            {/* Jornada */}
             <div>
               <label className="flex items-center gap-1.5 block text-xs font-bold text-slate-700 uppercase mb-2">
                 <Clock size={14} className="text-blue-600" /> Jornada de Trabalho *
               </label>
-              <select name="jornada" defaultValue={servidorBase.jornada || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700">
+              <select name="jornada" defaultValue={servidorBase.jornada || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700">
                 <option value="">Selecione...</option>
                 <option value="20h Semanais">20h Semanais</option>
                 <option value="30h Semanais">30h Semanais</option>
@@ -233,6 +252,7 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
               </select>
             </div>
 
+            {/* Remuneração Base */}
             <div>
               <label className="flex items-center gap-1.5 block text-xs font-bold text-slate-700 uppercase mb-2">
                 <DollarSign size={14} className="text-emerald-600" /> Remuneração Base (Bruto) *
@@ -247,7 +267,7 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
                   defaultValue={servidorBase.remuneracaoBase ?? ""} 
                   required 
                   placeholder="0.00" 
-                  className="w-full border border-slate-200 rounded-xl p-3 pl-11 outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-800 font-semibold" 
+                  className="w-full border border-slate-200 rounded-xl p-3 pl-11 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 text-slate-800 font-bold" 
                 />
               </div>
             </div>

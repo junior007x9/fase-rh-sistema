@@ -63,8 +63,8 @@ export default async function PerfilServidorPage({
   const [banco] = await db.select().from(dadosBancarios).where(eq(dadosBancarios.servidorId, servidorId));
   
   const listaDependentes = await db.select().from(dependentesPensionistas).where(eq(dependentesPensionistas.servidorId, servidorId));
-  // 1. Tenta buscar da tabela de lotações
-  // Trecho corrigido e blindado para o TypeScript:
+  
+  // SEGURANÇA: Busca lotações da tabela oficial ou extrai dos servidores se estiver vazia
   let listaLotacoes = await db.select().from(lotacoes);
   if (listaLotacoes.length === 0) {
     const todosServidoresLotacao = await db.select({ lotacao: servidores.lotacao }).from(servidores);
@@ -107,9 +107,7 @@ export default async function PerfilServidorPage({
   return (
     <div className="max-w-7xl mx-auto pb-12 space-y-8 relative animate-in fade-in duration-500">
       
-      {/* ========================================== */}
-      {/* MODAL DE TRANSFERÊNCIA (POP-UP FLUTUANTE) */}
-      {/* ========================================== */}
+      {/* MODAL DE TRANSFERÊNCIA */}
       {abrirTransferencia && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200">
@@ -168,9 +166,7 @@ export default async function PerfilServidorPage({
         </div>
       )}
       
-      {/* ========================================== */}
       {/* CABEÇALHO DO PERFIL */}
-      {/* ========================================== */}
       <header className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-slate-200 pb-6 gap-6">
         <div className="flex items-center gap-4">
           <Link href="/servidores" className="p-3 bg-white border border-slate-200 shadow-sm rounded-xl hover:bg-slate-50 transition-colors hidden sm:block">
@@ -201,7 +197,6 @@ export default async function PerfilServidorPage({
         </div>
         
         <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
-          {/* BOTÕES DE RELATÓRIO E AÇÕES */}
           <BotaoImprimirFicha servidor={servidorBase} pessoal={pessoal} ferias={ferias} />
           <BotaoDeclaracaoVinculo servidor={servidorBase} pessoal={pessoal} historico={historicoMovimentacoes} />
           
@@ -225,14 +220,10 @@ export default async function PerfilServidorPage({
         </div>
       </header>
 
-      {/* ========================================== */}
       {/* CORPO DO PERFIL - 2 COLUNAS */}
-      {/* ========================================== */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         
-        {/* ========================================== */}
         {/* COLUNA ESQUERDA */}
-        {/* ========================================== */}
         <div className="space-y-6 lg:space-y-8">
 
           {/* VÍNCULO INSTITUCIONAL E FOLHA */}
@@ -387,9 +378,7 @@ export default async function PerfilServidorPage({
 
         </div>
 
-        {/* ========================================== */}
         {/* COLUNA DIREITA */}
-        {/* ========================================== */}
         <div className="space-y-6 lg:space-y-8">
           
           {/* ENDEREÇO RESIDENCIAL */}

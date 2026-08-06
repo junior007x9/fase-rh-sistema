@@ -10,11 +10,12 @@ export const dynamic = "force-dynamic";
 export default async function ServidoresPage({
   searchParams,
 }: {
-  searchParams: { q?: string; pagina?: string }
+  searchParams: any
 }) {
-  // 1. Controle de Busca e Paginação
-  const q = searchParams?.q || "";
-  const paginaAtual = Number(searchParams?.pagina) || 1;
+  // 1. Controle de Busca e Paginação (Garante compatibilidade com Next.js mais recentes)
+  const params = await Promise.resolve(searchParams);
+  const q = params?.q || "";
+  const paginaAtual = Number(params?.pagina) || 1;
   const itensPorPagina = 15;
   const offset = (paginaAtual - 1) * itensPorPagina;
 
@@ -57,36 +58,40 @@ export default async function ServidoresPage({
 
   // 5. Função para manter a pesquisa ao trocar de página
   const getPageUrl = (novaPagina: number) => {
-    const params = new URLSearchParams();
-    if (q) params.set('q', q);
-    params.set('pagina', novaPagina.toString());
-    return `?${params.toString()}`;
+    const p = new URLSearchParams();
+    if (q) p.set('q', q);
+    p.set('pagina', novaPagina.toString());
+    return `?${p.toString()}`;
   };
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12">
       {/* CABEÇALHO E BARRA DE PESQUISA */}
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
-        <div>
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col lg:flex-row justify-between items-center gap-4">
+        <div className="w-full lg:w-auto text-center lg:text-left">
           <h1 className="text-2xl font-bold text-slate-800">Servidores</h1>
           <p className="text-slate-500 text-sm mt-1">Gerencie os {totalRegistros} servidores cadastrados na base.</p>
         </div>
 
-        <div className="flex w-full md:w-auto items-center gap-3">
-          {/* O FORMULÁRIO "GET" ACIONA A BUSCA AUTOMATICAMENTE PELO NEXT.JS */}
-          <form method="GET" className="relative w-full md:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input
-              type="text"
-              name="q"
-              defaultValue={q}
-              placeholder="Buscar por nome, matrícula ou CPF..."
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
-            />
-            <button type="submit" className="hidden">Buscar</button>
+        <div className="flex w-full lg:w-auto flex-col sm:flex-row items-center gap-3">
+          {/* AGORA COM BOTÃO VISÍVEL E ACTION CORRETA */}
+          <form method="GET" action="/servidores" className="flex items-center w-full sm:w-[400px] gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input
+                type="text"
+                name="q"
+                defaultValue={q}
+                placeholder="Buscar por nome, matrícula ou CPF..."
+                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
+              />
+            </div>
+            <button type="submit" className="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors border border-slate-800 shadow-sm">
+              Buscar
+            </button>
           </form>
 
-          <Link href="/servidores/novo" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-2 whitespace-nowrap shadow-sm">
+          <Link href="/servidores/novo" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2 w-full sm:w-auto shadow-sm">
             <Plus size={18} /> Novo
           </Link>
         </div>
@@ -98,8 +103,8 @@ export default async function ServidoresPage({
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 text-xs uppercase tracking-wider">
-                <th className="p-4 font-semibold">Nome / Matrícula</th>
-                <th className="p-4 font-semibold">Cargo / Lotação</th>
+                <th className="p-4 font-semibold min-w-[250px]">Nome / Matrícula</th>
+                <th className="p-4 font-semibold min-w-[200px]">Cargo / Lotação</th>
                 <th className="p-4 font-semibold">Status</th>
                 <th className="p-4 font-semibold text-right">Ações</th>
               </tr>
@@ -108,7 +113,7 @@ export default async function ServidoresPage({
               {listaServidores.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="p-8 text-center text-slate-500">
-                    Nenhum servidor encontrado para esta busca.
+                    Nenhum servidor encontrado para a busca "{q}".
                   </td>
                 </tr>
               ) : (
@@ -152,7 +157,7 @@ export default async function ServidoresPage({
         {totalPaginas > 1 && (
           <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-slate-50">
             <span className="text-sm text-slate-500">
-              Mostrando página <strong className="text-slate-800">{paginaAtual}</strong> de <strong className="text-slate-800">{totalPaginas}</strong>
+              Página <strong className="text-slate-800">{paginaAtual}</strong> de <strong className="text-slate-800">{totalPaginas}</strong>
             </span>
             <div className="flex gap-2">
               {paginaAtual > 1 && (

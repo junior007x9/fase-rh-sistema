@@ -1,6 +1,6 @@
 // Arquivo: app/servidores/page.tsx
-import { db } from "../db/index";
-import { servidores, dadosPessoais, documentos } from "../db/schema";
+import { db } from "../../db/index";
+import { servidores, dadosPessoais, documentos } from "../../db/schema";
 import { eq, or, sql } from "drizzle-orm";
 import { Search, Plus, UserCheck, UserX, ChevronLeft, ChevronRight, Eye, Edit } from "lucide-react";
 import Link from "next/link";

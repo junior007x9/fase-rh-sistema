@@ -1,6 +1,6 @@
 // Arquivo: app/cargos-lotacoes/page.tsx
-import { db } from "../db/index";
-import { servidores } from "../db/schema";
+import { db } from "../../db/index";
+import { servidores } from "../../db/schema";
 import { sql, eq, desc } from "drizzle-orm";
 import { Briefcase, MapPin, Users } from "lucide-react";
 

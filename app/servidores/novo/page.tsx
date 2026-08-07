@@ -2,6 +2,7 @@
 import { cadastrarServidor } from "../../actions/servidores";
 import { db } from "../../../db/index";
 import { cargos, lotacoes, servidores } from "../../../db/schema";
+import { isNull } from "drizzle-orm";
 import Link from "next/link";
 import { ArrowLeft, User, FileText, Briefcase, Heart, Save, DollarSign, Clock } from "lucide-react";
 
@@ -11,18 +12,20 @@ export default async function NovoServidorPage() {
   // ============================================================================
   // SEGURANÇA: Busca listas oficiais. Se vazias, extrai os valores já cadastrados
   // ============================================================================
-  let listaCargos = await db.select().from(cargos);
+  let listaCargos = await db.select().from(cargos).where(isNull(cargos.excluidoEm));
   if (listaCargos.length === 0) {
     const todosCargos = await db.select({ cargo: servidores.cargo }).from(servidores);
     const cargosUnicos = Array.from(new Set(todosCargos.map(s => s.cargo).filter(Boolean))) as string[];
-    listaCargos = cargosUnicos.map((nome, index) => ({ id: String(index), nome, descricao: null, criadoEm: null }));
+    // CORREÇÃO DO TYPESCRIPT AQUI 👇
+    listaCargos = cargosUnicos.map((nome, index) => ({ id: String(index), nome, descricao: null, criadoEm: null, excluidoEm: null }));
   }
 
-  let listaLotacoes = await db.select().from(lotacoes);
+  let listaLotacoes = await db.select().from(lotacoes).where(isNull(lotacoes.excluidoEm));
   if (listaLotacoes.length === 0) {
     const todasLotacoes = await db.select({ lotacao: servidores.lotacao }).from(servidores);
     const lotacoesUnicas = Array.from(new Set(todasLotacoes.map(s => s.lotacao).filter(Boolean))) as string[];
-    listaLotacoes = lotacoesUnicas.map((nome, index) => ({ id: String(index), nome, sigla: "", criadoEm: null }));
+    // CORREÇÃO DO TYPESCRIPT AQUI 👇
+    listaLotacoes = lotacoesUnicas.map((nome, index) => ({ id: String(index), nome, sigla: "", criadoEm: null, excluidoEm: null }));
   }
 
   return (

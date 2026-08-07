@@ -3,7 +3,7 @@ import { db } from "../../db/index";
 import { servidores, dadosPessoais, lotacoes, cargos } from "../../db/schema";
 import { eq, sql } from "drizzle-orm";
 import Link from "next/link";
-import { Briefcase, MapPin, Users, User, ChevronRight } from "lucide-react";
+import { Briefcase, MapPin, Users, User, ChevronRight, X } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -73,8 +73,8 @@ export default async function CargosLotacoesPage({
           <p className="text-slate-500 text-sm mt-1">Visão gerencial e distribuição do quadro de servidores ativos da FASE-MA.</p>
         </div>
         {nomeFiltro && (
-          <Link href="/cargos-lotacoes" className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition-colors">
-            Limpar Filtro / Voltar ao Resumo
+          <Link href="/cargos-lotacoes" className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 shadow-sm">
+            <X size={16} /> Limpar Filtro / Voltar ao Resumo
           </Link>
         )}
       </header>
@@ -82,12 +82,12 @@ export default async function CargosLotacoesPage({
       {/* SE UM FILTRO FOI CLICADO, MOSTRA OS SERVIDORES DAQUELE GRUPO */}
       {nomeFiltro ? (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="p-5 bg-slate-900 text-white flex justify-between items-center">
+          <div className="p-5 bg-slate-900 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Servidores alocados em:</span>
               <h2 className="text-lg font-extrabold text-emerald-400">{nomeFiltro}</h2>
             </div>
-            <span className="bg-slate-800 text-slate-200 text-xs font-bold px-3 py-1.5 rounded-xl">
+            <span className="bg-slate-800 text-slate-200 text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-700">
               {servidoresExibidos.length} servidor(es) encontrado(s)
             </span>
           </div>
@@ -97,19 +97,19 @@ export default async function CargosLotacoesPage({
               <div className="p-8 text-center text-slate-400 text-sm font-medium">Nenhum servidor encontrado neste registro.</div>
             ) : (
               servidoresExibidos.map(srv => (
-                <div key={srv.id} className="p-4 hover:bg-slate-50 transition-colors flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold shrink-0">
+                <div key={srv.id} className="p-4 hover:bg-slate-50 transition-colors flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group">
+                  <div className="flex items-center gap-3 w-full sm:w-auto">
+                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold shrink-0 border border-slate-200">
                       {srv.nome ? srv.nome.charAt(0).toUpperCase() : 'S'}
                     </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-800">{srv.nome}</h3>
-                      <p className="text-xs text-slate-500 mt-0.5">
+                    <div className="overflow-hidden">
+                      <h3 className="text-sm font-bold text-slate-800 truncate">{srv.nome}</h3>
+                      <p className="text-xs text-slate-500 mt-0.5 truncate">
                         Matrícula: <strong className="text-slate-700">{srv.matricula || 'N/A'}</strong> | Cargo: {srv.cargo} | Lotação: {srv.lotacao}
                       </p>
                     </div>
                   </div>
-                  <Link href={`/servidores/${srv.id}`} className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 hover:text-blue-600 text-slate-700 rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center gap-1">
+                  <Link href={`/servidores/${srv.id}`} className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 hover:text-blue-600 text-slate-700 rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center justify-center gap-1 w-full sm:w-auto">
                     Ver Perfil <ChevronRight size={14} />
                   </Link>
                 </div>
@@ -128,7 +128,7 @@ export default async function CargosLotacoesPage({
                 <Briefcase size={22} />
                 <h2 className="font-bold text-base">Distribuição por Cargo</h2>
               </div>
-              <span className="text-xs bg-blue-700 px-3 py-1 rounded-xl font-bold">{listaCargosResumo.length} cargos distintos</span>
+              <span className="text-[10px] sm:text-xs bg-blue-700 px-3 py-1 rounded-xl font-bold border border-blue-500/30">{listaCargosResumo.length} cargos distintos</span>
             </div>
 
             <div className="divide-y divide-slate-100 max-h-[500px] overflow-y-auto">
@@ -162,7 +162,7 @@ export default async function CargosLotacoesPage({
                 <MapPin size={22} />
                 <h2 className="font-bold text-base">Distribuição por Unidade / Lotação</h2>
               </div>
-              <span className="text-xs bg-purple-700 px-3 py-1 rounded-xl font-bold">{listaLotacoesResumo.length} lotações ativas</span>
+              <span className="text-[10px] sm:text-xs bg-purple-700 px-3 py-1 rounded-xl font-bold border border-purple-500/30">{listaLotacoesResumo.length} lotações ativas</span>
             </div>
 
             <div className="divide-y divide-slate-100 max-h-[500px] overflow-y-auto">

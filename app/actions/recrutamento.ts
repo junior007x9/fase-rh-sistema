@@ -6,21 +6,29 @@ import { candidatos } from "../../db/schema";
 import { eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation"; // <-- NOVA IMPORTAÇÃO
+import { redirect } from "next/navigation";
 import { registrarLogAuditoria } from "./auditoria";
 
 // 1. Função para Cadastrar Novo Candidato
 export async function registrarCandidato(formData: FormData) {
-  const nome = formData.get("nome") as string;
-  const cpf = formData.get("cpf") as string;
-  const email = formData.get("email") as string;
-  const telefone = formData.get("telefone") as string;
-  const qualificacaoCurriculo = formData.get("qualificacaoCurriculo") as string;
-  const areaAdaptacaoSugerida = formData.get("areaAdaptacaoSugerida") as string;
+  const nomeRaw = formData.get("nome") as string;
+  const cpfRaw = formData.get("cpf") as string;
+  const emailRaw = formData.get("email") as string;
+  const telefoneRaw = formData.get("telefone") as string;
+  const qualificacaoRaw = formData.get("qualificacaoCurriculo") as string;
+  const areaRaw = formData.get("areaAdaptacaoSugerida") as string;
 
-  if (!nome || !cpf || !email || !telefone) {
+  if (!nomeRaw || !cpfRaw || !emailRaw || !telefoneRaw) {
     throw new Error("Preencha todos os campos obrigatórios.");
   }
+
+  // BLINDAGEM DE DADOS (Sanitização)
+  const nome = nomeRaw.trim().toUpperCase();
+  const cpf = cpfRaw.trim();
+  const email = emailRaw.trim().toLowerCase();
+  const telefone = telefoneRaw.trim();
+  const qualificacaoCurriculo = qualificacaoRaw ? qualificacaoRaw.trim() : null;
+  const areaAdaptacaoSugerida = areaRaw ? areaRaw.trim().toUpperCase() : null;
 
   try {
     const novoId = randomUUID();
@@ -31,8 +39,8 @@ export async function registrarCandidato(formData: FormData) {
       cpf,
       email,
       telefone,
-      qualificacaoCurriculo: qualificacaoCurriculo || null,
-      areaAdaptacaoSugerida: areaAdaptacaoSugerida || null,
+      qualificacaoCurriculo,
+      areaAdaptacaoSugerida,
       status: "RESERVA",
     });
 
@@ -84,12 +92,25 @@ export async function excluirCandidato(id: string, nome: string) {
 // ==========================================
 export async function atualizarDadosCandidato(formData: FormData) {
   const id = formData.get("id") as string;
-  const nome = formData.get("nome") as string;
-  const cpf = formData.get("cpf") as string;
-  const email = formData.get("email") as string;
-  const telefone = formData.get("telefone") as string;
-  const qualificacaoCurriculo = formData.get("qualificacaoCurriculo") as string;
-  const areaAdaptacaoSugerida = formData.get("areaAdaptacaoSugerida") as string;
+  
+  const nomeRaw = formData.get("nome") as string;
+  const cpfRaw = formData.get("cpf") as string;
+  const emailRaw = formData.get("email") as string;
+  const telefoneRaw = formData.get("telefone") as string;
+  const qualificacaoRaw = formData.get("qualificacaoCurriculo") as string;
+  const areaRaw = formData.get("areaAdaptacaoSugerida") as string;
+
+  if (!nomeRaw || !cpfRaw || !emailRaw || !telefoneRaw) {
+    throw new Error("Preencha todos os campos obrigatórios.");
+  }
+
+  // BLINDAGEM DE DADOS (Sanitização)
+  const nome = nomeRaw.trim().toUpperCase();
+  const cpf = cpfRaw.trim();
+  const email = emailRaw.trim().toLowerCase();
+  const telefone = telefoneRaw.trim();
+  const qualificacaoCurriculo = qualificacaoRaw ? qualificacaoRaw.trim() : null;
+  const areaAdaptacaoSugerida = areaRaw ? areaRaw.trim().toUpperCase() : null;
 
   try {
     await db.update(candidatos).set({
@@ -97,8 +118,8 @@ export async function atualizarDadosCandidato(formData: FormData) {
       cpf,
       email,
       telefone,
-      qualificacaoCurriculo: qualificacaoCurriculo || null,
-      areaAdaptacaoSugerida: areaAdaptacaoSugerida || null,
+      qualificacaoCurriculo,
+      areaAdaptacaoSugerida,
       atualizadoEm: new Date().toISOString()
     }).where(eq(candidatos.id, id));
 

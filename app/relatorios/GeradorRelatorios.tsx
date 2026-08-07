@@ -5,7 +5,10 @@ import { useState } from "react";
 import { FileSpreadsheet, FileText, Filter, Calendar } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx-js-style"; // Usando o pacote com suporte a estilos profissionais
+import * as XLSX from "xlsx-js-style";
+
+// IMPORT DA NOSSA CENTRAL DE FORMATAÇÃO 🚀
+import { formatarDataExibicao } from "../utils/formatters";
 
 type ServidorData = {
   id: string;
@@ -83,7 +86,7 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
       const linhaFormatada = chavesColunas.map(coluna => {
         const valor = row[coluna] === null || row[coluna] === undefined ? "-" : String(row[coluna]);
         
-        // Alinhamento central para algumas colunas específicas (Matrícula, CPF, Data)
+        // Alinhamento central para algumas colunas específicas
         let alinhamento: "left" | "center" = "left";
         if (coluna === "Matrícula" || coluna === "CPF" || coluna === "Nascimento" || coluna === "Status" || coluna === "Admissão") {
           alinhamento = "center";
@@ -226,6 +229,7 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
     if (tipoFiltro === "ANIVERSARIANTES") {
       dadosFiltrados = dadosFiltrados.filter(s => {
         if (!s.dataNascimento) return false;
+        // Pega o mês preservando o formato padrão (YYYY-MM-DD)
         const mesNascimento = parseInt(s.dataNascimento.split('-')[1]);
         return mesNascimento === parseInt(mesFiltro);
       });
@@ -246,12 +250,13 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
       "Matrícula": s.matricula || "-",
       "Nome Completo": s.nome,
       "CPF": s.cpf,
-      "Nascimento": s.dataNascimento ? s.dataNascimento.split('-').reverse().join('/') : "-",
+      // Aplicando a nossa blindagem e formatação premium nas datas!
+      "Nascimento": formatarDataExibicao(s.dataNascimento) || "-",
       "Cargo": s.cargo || "-",
       "Lotação": s.lotacao || "-",
       "Vínculo": s.vinculo,
       "Status": s.status,
-      "Admissão": s.dataAdmissao ? s.dataAdmissao.split('-').reverse().join('/') : "-"
+      "Admissão": formatarDataExibicao(s.dataAdmissao) || "-"
     }));
 
     if (formato === "EXCEL") baixarExcel(dadosParaPlanilha, nomeArquivo, tituloRelatorio);
@@ -259,27 +264,27 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
   };
 
   return (
-    <div className="bg-white p-8 rounded-xl border border-gray-200 shadow-sm max-w-3xl">
-      <div className="flex items-center gap-3 mb-6 border-b pb-4">
-        <div className="bg-blue-100 p-3 rounded-lg text-blue-700">
-          <FileText size={24} />
+    <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm max-w-3xl">
+      <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
+        <div className="bg-blue-50 p-2.5 rounded-lg text-blue-600">
+          <FileText size={20} />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-gray-800">Parâmetros do Relatório</h2>
-          <p className="text-sm text-gray-500">Gere relatórios customizados com a identidade da FASE-MA.</p>
+          <h2 className="text-xl font-bold text-slate-800">Parâmetros do Relatório</h2>
+          <p className="text-sm text-slate-500">Gere relatórios customizados com a identidade da FASE-MA.</p>
         </div>
       </div>
 
       <div className="space-y-6">
         
         <div>
-          <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
-            <Filter size={16} /> Que tipo de relatório deseja gerar?
+          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+            <Filter size={14} className="text-blue-500" /> Que tipo de relatório deseja gerar?
           </label>
           <select 
             value={tipoFiltro} 
             onChange={(e) => setTipoFiltro(e.target.value)}
-            className="w-full border p-3 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-slate-200 p-3 text-sm rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-slate-700 font-semibold transition-colors"
           >
             <option value="TODOS">Listagem Geral (Todos os Servidores)</option>
             <option value="ANIVERSARIANTES">Aniversariantes por Mês</option>
@@ -289,14 +294,14 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
         </div>
 
         {tipoFiltro === "ANIVERSARIANTES" && (
-          <div className="bg-pink-50 p-4 rounded-lg border border-pink-200">
-            <label className="block text-sm font-bold text-pink-900 mb-2 flex items-center gap-2">
-              <Calendar size={16} /> Qual mês deseja consultar?
+          <div className="bg-pink-50/50 p-5 rounded-xl border border-pink-100">
+            <label className="block text-[10px] font-bold text-pink-700 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+              <Calendar size={14} /> Qual mês deseja consultar?
             </label>
             <select 
               value={mesFiltro} 
               onChange={(e) => setMesFiltro(e.target.value)}
-              className="w-full border border-pink-300 p-2.5 rounded-lg bg-white outline-none focus:ring-2 focus:ring-pink-500 text-pink-900 font-medium"
+              className="w-full border border-pink-200 p-3 text-sm rounded-xl bg-white outline-none focus:ring-2 focus:ring-pink-500 text-pink-800 font-bold transition-colors"
             >
               <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
               <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
@@ -307,36 +312,36 @@ export default function GeradorRelatorios({ baseDados }: { baseDados: ServidorDa
         )}
 
         <div>
-          <label className="block text-sm font-bold text-gray-700 mb-2">Filtrar por Status</label>
-          <div className="flex gap-4">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="radio" name="status" value="ATIVO" checked={statusFiltro === "ATIVO"} onChange={() => setStatusFiltro("ATIVO")} className="w-4 h-4 text-blue-600" />
-              <span>Apenas Ativos</span>
+          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-3">Filtrar por Status do Servidor</label>
+          <div className="flex flex-wrap gap-4 sm:gap-6">
+            <label className="flex items-center gap-2.5 cursor-pointer group">
+              <input type="radio" name="status" value="ATIVO" checked={statusFiltro === "ATIVO"} onChange={() => setStatusFiltro("ATIVO")} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+              <span className="text-sm font-semibold text-slate-600 group-hover:text-blue-600 transition-colors">Apenas Ativos</span>
             </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="radio" name="status" value="DESLIGADO" checked={statusFiltro === "DESLIGADO"} onChange={() => setStatusFiltro("DESLIGADO")} className="w-4 h-4 text-blue-600" />
-              <span>Apenas Desligados</span>
+            <label className="flex items-center gap-2.5 cursor-pointer group">
+              <input type="radio" name="status" value="DESLIGADO" checked={statusFiltro === "DESLIGADO"} onChange={() => setStatusFiltro("DESLIGADO")} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+              <span className="text-sm font-semibold text-slate-600 group-hover:text-blue-600 transition-colors">Apenas Desligados</span>
             </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="radio" name="status" value="TODOS" checked={statusFiltro === "TODOS"} onChange={() => setStatusFiltro("TODOS")} className="w-4 h-4 text-blue-600" />
-              <span>Todos (Ignorar Status)</span>
+            <label className="flex items-center gap-2.5 cursor-pointer group">
+              <input type="radio" name="status" value="TODOS" checked={statusFiltro === "TODOS"} onChange={() => setStatusFiltro("TODOS")} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+              <span className="text-sm font-semibold text-slate-600 group-hover:text-blue-600 transition-colors">Todos (Ignorar Status)</span>
             </label>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-100">
           <button 
             onClick={() => prepararGeracao("PDF")}
-            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-md"
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-extrabold py-3.5 rounded-xl transition-all shadow-lg shadow-red-600/20 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0"
           >
-            <FileText size={20} /> Baixar PDF
+            <FileText size={18} /> Baixar PDF
           </button>
           
           <button 
             onClick={() => prepararGeracao("EXCEL")}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-md"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3.5 rounded-xl transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0"
           >
-            <FileSpreadsheet size={20} /> Baixar Excel (.xlsx)
+            <FileSpreadsheet size={18} /> Baixar Excel (.xlsx)
           </button>
         </div>
 

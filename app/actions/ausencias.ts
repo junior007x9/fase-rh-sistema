@@ -10,6 +10,9 @@ import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { registrarLogAuditoria } from "./auditoria";
 
+// IMPORT DA NOSSA CENTRAL DE FORMATAÇÃO 🚀
+import { formatarDataInput, formatarNumeroInput } from "../utils/formatters";
+
 // ==========================================
 // 1. PERÍODOS AQUISITIVOS DE FÉRIAS
 // ==========================================
@@ -19,8 +22,11 @@ export async function salvarPeriodoAquisitivo(formData: FormData) {
   if (!sessao) throw new Error("Acesso negado.");
 
   const servidorId = formData.get("servidorId") as string;
-  const dataInicio = formData.get("dataInicio") as string;
-  const dataFim = formData.get("dataFim") as string;
+  
+  // BLINDAGEM DE DATAS
+  const dataInicio = formatarDataInput(formData.get("dataInicio") as string);
+  const dataFim = formatarDataInput(formData.get("dataFim") as string);
+  
   const novoId = randomUUID();
 
   await db.insert(periodosAquisitivos).values({
@@ -44,8 +50,10 @@ export async function atualizarPeriodoAquisitivo(formData: FormData) {
 
   const id = formData.get("id") as string;
   const servidorId = formData.get("servidorId") as string;
-  const dataInicio = formData.get("dataInicio") as string;
-  const dataFim = formData.get("dataFim") as string;
+  
+  // BLINDAGEM DE DATAS
+  const dataInicio = formatarDataInput(formData.get("dataInicio") as string);
+  const dataFim = formatarDataInput(formData.get("dataFim") as string);
 
   try {
     await db.update(periodosAquisitivos).set({
@@ -84,20 +92,24 @@ export async function salvarEventoAusencia(formData: FormData) {
 
   const servidorId = formData.get("servidorId") as string;
   let tipoAusencia = formData.get("tipoAusencia") as string;
-  const dataInicio = formData.get("dataInicio") as string;
   const observacao = formData.get("observacao") as string;
   const periodoAquisitivoId = formData.get("periodoAquisitivoId") as string | null;
-  const cid = formData.get("cid") as string;
+  const cidRaw = formData.get("cid") as string;
   
-  // Pegamos dias (da nova tela) e dataFim (de telas antigas, por segurança)
-  const diasStr = formData.get("dias") as string;
-  let dataFim = formData.get("dataFim") as string;
+  // BLINDAGEM DE TEXTO MÉDICO
+  const cid = cidRaw ? cidRaw.trim().toUpperCase() : undefined;
+
+  // BLINDAGEM DE DATAS E NÚMEROS
+  const dataInicio = formatarDataInput(formData.get("dataInicio") as string);
+  let dataFim = formatarDataInput(formData.get("dataFim") as string);
+  const diasStr = formatarNumeroInput(formData.get("dias"));
   let dias: number | undefined = undefined;
 
   // Se houver Qtd Dias (vindo do nosso novo form), calculamos a DataFim automaticamente
-  if (diasStr) {
+  if (diasStr !== "") {
     dias = parseInt(diasStr);
-    const dataInicioObj = new Date(dataInicio);
+    // Cria a data sempre no horário neutro para não ter bug de fuso horário brasileiro
+    const dataInicioObj = new Date(dataInicio + "T12:00:00Z");
     const dataFimObj = new Date(dataInicioObj);
     dataFimObj.setDate(dataFimObj.getDate() + dias - 1);
     dataFim = dataFimObj.toISOString().split('T')[0];
@@ -117,7 +129,7 @@ export async function salvarEventoAusencia(formData: FormData) {
     dataInicio,
     dataFim, // Inserida manualmente ou calculada acima
     dias,
-    cid: cid ? cid.toUpperCase() : undefined,
+    cid,
     observacao,
     periodoAquisitivoId: periodoAquisitivoId || undefined,
   });
@@ -141,19 +153,23 @@ export async function atualizarAusencia(formData: FormData) {
   const id = formData.get("id") as string;
   const servidorId = formData.get("servidorId") as string;
   let tipoAusencia = formData.get("tipoAusencia") as string;
-  const dataInicio = formData.get("dataInicio") as string;
   const observacao = formData.get("observacao") as string;
   const periodoAquisitivoId = formData.get("periodoAquisitivoId") as string | null;
-  const cid = formData.get("cid") as string;
+  const cidRaw = formData.get("cid") as string;
 
-  const diasStr = formData.get("dias") as string;
-  let dataFim = formData.get("dataFim") as string;
+  // BLINDAGEM DE TEXTO MÉDICO
+  const cid = cidRaw ? cidRaw.trim().toUpperCase() : undefined;
+
+  // BLINDAGEM DE DATAS E NÚMEROS
+  const dataInicio = formatarDataInput(formData.get("dataInicio") as string);
+  let dataFim = formatarDataInput(formData.get("dataFim") as string);
+  const diasStr = formatarNumeroInput(formData.get("dias"));
   let dias: number | undefined = undefined;
 
   // Recalcula DataFim na Edição também
-  if (diasStr) {
+  if (diasStr !== "") {
     dias = parseInt(diasStr);
-    const dataInicioObj = new Date(dataInicio);
+    const dataInicioObj = new Date(dataInicio + "T12:00:00Z");
     const dataFimObj = new Date(dataInicioObj);
     dataFimObj.setDate(dataFimObj.getDate() + dias - 1);
     dataFim = dataFimObj.toISOString().split('T')[0];
@@ -171,7 +187,7 @@ export async function atualizarAusencia(formData: FormData) {
       dataInicio,
       dataFim,
       dias,
-      cid: cid ? cid.toUpperCase() : undefined,
+      cid,
       observacao: observacao || null,
       periodoAquisitivoId: periodoAquisitivoId || undefined,
     }).where(eq(eventosAusencia.id, id));

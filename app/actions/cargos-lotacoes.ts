@@ -13,15 +13,18 @@ import { registrarLogAuditoria } from "./auditoria";
 // ==========================================
 
 export async function criarCargo(formData: FormData) {
-  const nome = formData.get("nome") as string;
-  if (!nome) return { erro: "Nome é obrigatório." };
+  const nomeRaw = formData.get("nome") as string;
+  if (!nomeRaw) return { erro: "Nome é obrigatório." };
+
+  // BLINDAGEM: Remove espaços no final/início e padroniza tudo em maiúsculo
+  const nomeLimpo = nomeRaw.trim().toUpperCase();
 
   try {
     const novoId = randomUUID();
-    await db.insert(cargos).values({ id: novoId, nome });
+    await db.insert(cargos).values({ id: novoId, nome: nomeLimpo });
     
     // Registra na auditoria
-    await registrarLogAuditoria("CRIAR", "cargos", novoId, `Criou o cargo: ${nome}`);
+    await registrarLogAuditoria("CRIAR", "cargos", novoId, `Criou o cargo: ${nomeLimpo}`);
     
     revalidatePath("/cargos-lotacoes");
     return { sucesso: true };
@@ -33,11 +36,14 @@ export async function criarCargo(formData: FormData) {
 export async function atualizarCargo(id: string, novoNome: string) {
   if (!novoNome) return { erro: "Nome é obrigatório." };
 
+  // BLINDAGEM: Remove espaços no final/início e padroniza
+  const nomeLimpo = novoNome.trim().toUpperCase();
+
   try {
-    await db.update(cargos).set({ nome: novoNome }).where(eq(cargos.id, id));
+    await db.update(cargos).set({ nome: nomeLimpo }).where(eq(cargos.id, id));
     
     // Registra na auditoria
-    await registrarLogAuditoria("EDITAR", "cargos", id, `Atualizou o cargo para: ${novoNome}`);
+    await registrarLogAuditoria("EDITAR", "cargos", id, `Atualizou o cargo para: ${nomeLimpo}`);
     
     revalidatePath("/cargos-lotacoes");
     return { sucesso: true };
@@ -65,15 +71,20 @@ export async function excluirCargo(id: string, nomeAntigo: string) {
 // ==========================================
 
 export async function criarLotacao(formData: FormData) {
-  const nome = formData.get("nome") as string;
-  const sigla = formData.get("sigla") as string;
-  if (!nome || !sigla) return { erro: "Nome e sigla são obrigatórios." };
+  const nomeRaw = formData.get("nome") as string;
+  const siglaRaw = formData.get("sigla") as string;
+  
+  if (!nomeRaw || !siglaRaw) return { erro: "Nome e sigla são obrigatórios." };
+
+  // BLINDAGEM: Formata os textos
+  const nomeLimpo = nomeRaw.trim().toUpperCase();
+  const siglaLimpa = siglaRaw.trim().toUpperCase();
 
   try {
     const novoId = randomUUID();
-    await db.insert(lotacoes).values({ id: novoId, nome, sigla });
+    await db.insert(lotacoes).values({ id: novoId, nome: nomeLimpo, sigla: siglaLimpa });
     
-    await registrarLogAuditoria("CRIAR", "lotacoes", novoId, `Criou a lotação: ${sigla} - ${nome}`);
+    await registrarLogAuditoria("CRIAR", "lotacoes", novoId, `Criou a lotação: ${siglaLimpa} - ${nomeLimpo}`);
     
     revalidatePath("/cargos-lotacoes");
     return { sucesso: true };
@@ -94,13 +105,18 @@ export async function excluirLotacao(id: string, siglaAntiga: string) {
     return { erro: "Erro ao excluir lotação." };
   }
 }
+
 export async function atualizarLotacao(id: string, novoNome: string) {
   if (!novoNome) return { erro: "Nome é obrigatório." };
+  
+  // BLINDAGEM: Formata os textos
+  const nomeLimpo = novoNome.trim().toUpperCase();
+
   try {
-    await db.update(lotacoes).set({ nome: novoNome }).where(eq(lotacoes.id, id));
+    await db.update(lotacoes).set({ nome: nomeLimpo }).where(eq(lotacoes.id, id));
     
     // O espião da auditoria entra em ação!
-    await registrarLogAuditoria("EDITAR", "lotacoes", id, `Atualizou a lotação para: ${novoNome}`);
+    await registrarLogAuditoria("EDITAR", "lotacoes", id, `Atualizou a lotação para: ${nomeLimpo}`);
     
     revalidatePath("/cargos-lotacoes");
     return { sucesso: true };

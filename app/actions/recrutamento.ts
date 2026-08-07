@@ -78,8 +78,12 @@ export async function atualizarStatusCandidato(formData: FormData) {
 // 3. Função para Excluir Candidato
 export async function excluirCandidato(id: string, nome: string) {
   try {
-    await db.delete(candidatos).where(eq(candidatos.id, id));
-    await registrarLogAuditoria("EXCLUIR", "candidatos", id, `Excluiu o candidato: ${nome}`);
+    // SOFT DELETE: Atualiza com a data atual em vez de apagar do banco
+    await db.update(candidatos)
+      .set({ excluidoEm: new Date().toISOString() })
+      .where(eq(candidatos.id, id));
+      
+    await registrarLogAuditoria("EXCLUIR", "candidatos", id, `Excluiu (logicamente) o candidato: ${nome}`);
     revalidatePath("/recrutamento");
     return { sucesso: true };
   } catch (error) {

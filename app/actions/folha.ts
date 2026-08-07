@@ -120,8 +120,13 @@ export async function excluirLancamentoFolha(idLancamento: string, servidorId: s
   if (!sessao) throw new Error("Acesso negado.");
 
   try {
-    await db.delete(lancamentosFolha).where(eq(lancamentosFolha.id, idLancamento));
-    await registrarLogAuditoria("EXCLUIR", "lancamentos_folha", servidorId, `Excluiu lançamento da folha.`);
+    // 🛡️ SOFT DELETE ENTERPRISE 🛡️
+    // Apenas marca como excluído logicamente, preservando os registros contábeis no banco!
+    await db.update(lancamentosFolha)
+      .set({ excluidoEm: new Date().toISOString() })
+      .where(eq(lancamentosFolha.id, idLancamento));
+      
+    await registrarLogAuditoria("EXCLUIR", "lancamentos_folha", servidorId, `Excluiu (logicamente) lançamento da folha.`);
   } catch (error) {
     throw new Error("Erro ao excluir lançamento.");
   }

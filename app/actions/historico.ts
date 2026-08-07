@@ -6,13 +6,19 @@ import { historicoFuncional } from "../../db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
+import { registrarLogAuditoria } from "./auditoria";
+
+// IMPORT DA NOSSA CENTRAL DE FORMATAÇÃO 🚀
+import { formatarDataInput } from "../utils/formatters";
 
 export async function alocarServidor(formData: FormData) {
   const servidorId = formData.get("servidorId") as string;
   const cargoId = formData.get("cargoId") as string;
   const lotacaoId = formData.get("lotacaoId") as string;
-  const dataInicio = formData.get("dataInicio") as string;
-  const observacao = formData.get("observacao") as string;
+  
+  // BLINDAGEM DE DATAS E TEXTOS
+  const dataInicio = formatarDataInput(formData.get("dataInicio") as string);
+  const observacao = (formData.get("observacao") as string)?.trim().toUpperCase();
 
   if (!servidorId || !cargoId || !lotacaoId || !dataInicio) {
     throw new Error("Preencha todos os campos obrigatórios.");
@@ -30,15 +36,19 @@ export async function alocarServidor(formData: FormData) {
         )
       );
 
+    const novoId = randomUUID();
+
     // 2. Inserir a nova alocação
     await db.insert(historicoFuncional).values({
-      id: randomUUID(),
+      id: novoId,
       servidorId,
       cargoId,
       lotacaoId,
       dataInicio,
       observacao: observacao || null,
     });
+
+    await registrarLogAuditoria("CRIAR", "historico_funcional", novoId, `Registrou nova alocação/movimentação funcional para o servidor`);
 
     revalidatePath(`/servidores/${servidorId}`);
   } catch (error) {

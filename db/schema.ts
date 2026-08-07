@@ -2,11 +2,14 @@
 import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 
-// 1. Cargos e Lotações
+// ==========================================
+// 1. CARGOS E LOTAÇÕES
+// ==========================================
 export const cargos = sqliteTable('cargos', {
   id: text('id').primaryKey(),
   nome: text('nome').notNull().unique(),
   criadoEm: text('criado_em').default(sql`CURRENT_TIMESTAMP`),
+  excluidoEm: text('excluido_em'), // <-- SOFT DELETE
 });
 
 export const lotacoes = sqliteTable('lotacoes', {
@@ -14,14 +17,17 @@ export const lotacoes = sqliteTable('lotacoes', {
   nome: text('nome').notNull().unique(),
   sigla: text('sigla').notNull(),
   criadoEm: text('criado_em').default(sql`CURRENT_TIMESTAMP`),
+  excluidoEm: text('excluido_em'), // <-- SOFT DELETE
 });
 
-// Arquivo: db/schema.ts (Exemplo da tabela servidores)
+// ==========================================
+// 2. SERVIDORES
+// ==========================================
 export const servidores = sqliteTable('servidores', {
   id: text('id').primaryKey(),
   matricula: text('matricula'),
-  cargo: text('cargo'), // <-- ADICIONE ESTA LINHA
-  lotacao: text('lotacao'), // <-- ADICIONE ESTA LINHA
+  cargo: text('cargo'),
+  lotacao: text('lotacao'),
   funcao: text('funcao'), 
   jornada: text('jornada'),
   remuneracaoBase: real('remuneracao_base'),
@@ -33,9 +39,12 @@ export const servidores = sqliteTable('servidores', {
   status: text('status', { enum: ['ATIVO', 'DESLIGADO', 'AFASTADO'] }).default('ATIVO').notNull(),
   criadoEm: text('criado_em').default(sql`CURRENT_TIMESTAMP`),
   atualizadoEm: text('atualizado_em').default(sql`CURRENT_TIMESTAMP`),
+  excluidoEm: text('excluido_em'), // <-- SOFT DELETE
 });
 
-// 3. Dados Pessoais
+// ==========================================
+// 3. DADOS PESSOAIS
+// ==========================================
 export const dadosPessoais = sqliteTable('dados_pessoais', {
   servidorId: text('servidor_id').primaryKey().references(() => servidores.id, { onDelete: 'cascade' }),
   nome: text('nome').notNull(),
@@ -50,7 +59,9 @@ export const dadosPessoais = sqliteTable('dados_pessoais', {
   telefone: text('telefone').notNull(),
 });
 
-// 4. Documentos
+// ==========================================
+// 4. DOCUMENTOS
+// ==========================================
 export const documentos = sqliteTable('documentos', {
   servidorId: text('servidor_id').primaryKey().references(() => servidores.id, { onDelete: 'cascade' }),
   cpf: text('cpf').unique(),
@@ -59,7 +70,9 @@ export const documentos = sqliteTable('documentos', {
   pisPasep: text('pis_pasep'),
 });
 
-// 5. Endereços
+// ==========================================
+// 5. ENDEREÇOS
+// ==========================================
 export const enderecos = sqliteTable('enderecos', {
   id: text('id').primaryKey(),
   servidorId: text('servidor_id').notNull().references(() => servidores.id, { onDelete: 'cascade' }),
@@ -72,7 +85,9 @@ export const enderecos = sqliteTable('enderecos', {
   cep: text('cep').notNull(),
 });
 
-// 6. Dados Bancários
+// ==========================================
+// 6. DADOS BANCÁRIOS
+// ==========================================
 export const dadosBancarios = sqliteTable('dados_bancarios', {
   id: text('id').primaryKey(),
   servidorId: text('servidor_id').notNull().unique().references(() => servidores.id, { onDelete: 'cascade' }),
@@ -82,7 +97,9 @@ export const dadosBancarios = sqliteTable('dados_bancarios', {
   nomeTitular: text('nome_titular').notNull(),
 });
 
-// 7. Contatos de Emergência
+// ==========================================
+// 7. CONTATOS DE EMERGÊNCIA
+// ==========================================
 export const contatosEmergencia = sqliteTable('contatos_emergencia', {
   id: text('id').primaryKey(),
   servidorId: text('servidor_id').notNull().references(() => servidores.id, { onDelete: 'cascade' }),
@@ -91,7 +108,9 @@ export const contatosEmergencia = sqliteTable('contatos_emergencia', {
   telefone: text('telefone').notNull(),
 });
 
-// 8. Dependentes e Pensionistas
+// ==========================================
+// 8. DEPENDENTES E PENSIONISTAS
+// ==========================================
 export const dependentesPensionistas = sqliteTable('dependentes_pensionistas', {
   id: text('id').primaryKey(),
   servidorId: text('servidor_id').notNull().references(() => servidores.id, { onDelete: 'cascade' }),
@@ -99,9 +118,12 @@ export const dependentesPensionistas = sqliteTable('dependentes_pensionistas', {
   tipo: text('tipo', { enum: ['DEPENDENTE', 'PENSIONISTA'] }).notNull(),
   parentesco: text('parentesco').notNull(),
   documentoReferencia: text('documento_referencia'), 
+  excluidoEm: text('excluido_em'), // <-- SOFT DELETE
 });
 
-// 9. Histórico Funcional
+// ==========================================
+// 9. HISTÓRICO FUNCIONAL
+// ==========================================
 export const historicoFuncional = sqliteTable('historico_funcional', {
   id: text('id').primaryKey(),
   servidorId: text('servidor_id').notNull().references(() => servidores.id, { onDelete: 'cascade' }),
@@ -113,7 +135,9 @@ export const historicoFuncional = sqliteTable('historico_funcional', {
   criadoEm: text('criado_em').default(sql`CURRENT_TIMESTAMP`),
 });
 
-// 10. Períodos Aquisitivos de Férias
+// ==========================================
+// 10. PERÍODOS AQUISITIVOS DE FÉRIAS
+// ==========================================
 export const periodosAquisitivos = sqliteTable('periodos_aquisitivos', {
   id: text('id').primaryKey(),
   servidorId: text('servidor_id').notNull().references(() => servidores.id, { onDelete: 'cascade' }),
@@ -121,23 +145,29 @@ export const periodosAquisitivos = sqliteTable('periodos_aquisitivos', {
   dataFim: text('data_fim').notNull(),
   status: text('status', { enum: ['PENDENTE', 'GOZADO', 'PARCIAL'] }).default('PENDENTE').notNull(),
   diasRestantes: integer('dias_restantes').default(30).notNull(),
+  excluidoEm: text('excluido_em'), // <-- SOFT DELETE
 });
 
-// 11. Eventos de Ausência
+// ==========================================
+// 11. EVENTOS DE AUSÊNCIA
+// ==========================================
 export const eventosAusencia = sqliteTable("eventos_ausencia", {
-  id: text("id").primaryKey(), // No SQLite, UUIDs são salvos como text
+  id: text("id").primaryKey(), 
   servidorId: text("servidor_id").references(() => servidores.id),
   tipoAusencia: text("tipo_ausencia").notNull(),
   dataInicio: text("data_inicio").notNull(),
   dataFim: text("data_fim").notNull(),
-  dias: integer("dias"), // <--- NOSSO CAMPO NOVO
-  cid: text("cid"),      // <--- NOSSO CAMPO NOVO
+  dias: integer("dias"),
+  cid: text("cid"),      
   observacao: text("observacao"),
   periodoAquisitivoId: text("periodo_aquisitivo_id"),
   criadoEm: integer("criado_em", { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+  excluidoEm: text('excluido_em'), // <-- SOFT DELETE
 });
 
-// 12. Recrutamento (Agora limpo e com segurança)
+// ==========================================
+// 12. RECRUTAMENTO E SELEÇÃO
+// ==========================================
 export const candidatos = sqliteTable('candidatos', {
   id: text('id').primaryKey(),
   nome: text('nome').notNull(),
@@ -149,9 +179,12 @@ export const candidatos = sqliteTable('candidatos', {
   status: text('status', { enum: ['RESERVA', 'CONVOCADO', 'REJEITADO'] }).default('RESERVA').notNull(),
   criadoEm: text('criado_em').default(sql`CURRENT_TIMESTAMP`),
   atualizadoEm: text('atualizado_em').default(sql`CURRENT_TIMESTAMP`),
+  excluidoEm: text('excluido_em'), // <-- SOFT DELETE
 });
 
+// ==========================================
 // 13. USUÁRIOS DO SISTEMA
+// ==========================================
 export const usuarios = sqliteTable('usuarios', {
   id: text('id').primaryKey(),
   nome: text('nome').notNull(),
@@ -159,9 +192,11 @@ export const usuarios = sqliteTable('usuarios', {
   senha: text('senha').notNull(),
   role: text('role', { enum: ['RH', 'DIRETORIA'] }).default('RH').notNull(),
   criadoEm: text('criado_em').default(sql`CURRENT_TIMESTAMP`),
+  excluidoEm: text('excluido_em'), // <-- SOFT DELETE
 });
+
 // ==========================================
-// 14. AUDITORIA E LOGS DO SISTEMA (Acesso Restrito)
+// 14. AUDITORIA E LOGS DO SISTEMA
 // ==========================================
 export const auditoriaLogs = sqliteTable('auditoria_logs', {
   id: text('id').primaryKey(),
@@ -169,35 +204,36 @@ export const auditoriaLogs = sqliteTable('auditoria_logs', {
   acao: text('acao', { enum: ['CRIAR', 'EDITAR', 'EXCLUIR'] }).notNull(),
   tabelaAfetada: text('tabela_afetada').notNull(),
   registroId: text('registro_id').notNull(),
-  detalhes: text('detalhes'), // O que mudou (pode salvar JSON aqui)
+  detalhes: text('detalhes'),
   criadoEm: text('criado_em').default(sql`CURRENT_TIMESTAMP`),
 });
-// Adicione no final do arquivo db/schema.ts
 
 // ==========================================
-// MÓDULO: HISTÓRICO DE TRANSFERÊNCIAS
+// 15. HISTÓRICO DE TRANSFERÊNCIAS
 // ==========================================
 export const historicoTransferencias = sqliteTable('historico_transferencias', {
   id: text('id').primaryKey(),
   servidorId: text('servidor_id').notNull().references(() => servidores.id),
-  lotacaoAnterior: text('lotacao_anterior'), // De onde ele saiu
-  lotacaoNova: text('lotacao_nova').notNull(), // Para onde ele foi
-  dataOcorrencia: text('data_ocorrencia').notNull(), // Data exata da mudança
+  lotacaoAnterior: text('lotacao_anterior'), 
+  lotacaoNova: text('lotacao_nova').notNull(), 
+  dataOcorrencia: text('data_ocorrencia').notNull(), 
   motivo: text('motivo'),
   criadoEm: text('criado_em').default(sql`CURRENT_TIMESTAMP`),
+  excluidoEm: text('excluido_em'), // <-- SOFT DELETE
 });
 
 // ==========================================
-// MÓDULO: FOLHA DE PAGAMENTO (LANÇAMENTOS)
+// 16. FOLHA DE PAGAMENTO (LANÇAMENTOS)
 // ==========================================
 export const lancamentosFolha = sqliteTable('lancamentos_folha', {
   id: text('id').primaryKey(),
   servidorId: text('servidor_id').notNull().references(() => servidores.id),
-  mesAno: text('mes_ano').notNull(), // Ex: "07-2026"
-  codigoEvento: text('codigo_evento').notNull(), // Ex: D001, P001
-  descricaoEvento: text('descricao_evento').notNull(), // Ex: "Falta", "DSR"
+  mesAno: text('mes_ano').notNull(), 
+  codigoEvento: text('codigo_evento').notNull(), 
+  descricaoEvento: text('descricao_evento').notNull(), 
   tipo: text('tipo', { enum: ['PROVENTO', 'DESCONTO'] }).notNull(),
-  quantidadeReferencia: real('quantidade_referencia'), // Ex: 2 (para 2 dias de falta)
-  valorFinal: real('valor_final').notNull(), // O valor em R$ calculado ou digitado
+  quantidadeReferencia: real('quantidade_referencia'), 
+  valorFinal: real('valor_final').notNull(),
   criadoEm: text('criado_em').default(sql`CURRENT_TIMESTAMP`),
+  excluidoEm: text('excluido_em'), // <-- SOFT DELETE
 });

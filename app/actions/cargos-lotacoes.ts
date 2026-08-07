@@ -54,15 +54,18 @@ export async function atualizarCargo(id: string, novoNome: string) {
 
 export async function excluirCargo(id: string, nomeAntigo: string) {
   try {
-    await db.delete(cargos).where(eq(cargos.id, id));
+    // SOFT DELETE: Em vez de deletar, atualizamos o campo excluidoEm com a data atual
+    await db.update(cargos)
+      .set({ excluidoEm: new Date().toISOString() })
+      .where(eq(cargos.id, id));
     
     // Registra na auditoria
-    await registrarLogAuditoria("EXCLUIR", "cargos", id, `Excluiu o cargo: ${nomeAntigo}`);
+    await registrarLogAuditoria("EXCLUIR", "cargos", id, `Excluiu (logicamente) o cargo: ${nomeAntigo}`);
     
     revalidatePath("/cargos-lotacoes");
     return { sucesso: true };
   } catch (error) {
-    return { erro: "Erro ao excluir cargo. Pode estar vinculado a um servidor." };
+    return { erro: "Erro ao excluir cargo." };
   }
 }
 
@@ -95,9 +98,12 @@ export async function criarLotacao(formData: FormData) {
 
 export async function excluirLotacao(id: string, siglaAntiga: string) {
   try {
-    await db.delete(lotacoes).where(eq(lotacoes.id, id));
+    // SOFT DELETE: Em vez de deletar, atualizamos o campo excluidoEm com a data atual
+    await db.update(lotacoes)
+      .set({ excluidoEm: new Date().toISOString() })
+      .where(eq(lotacoes.id, id));
     
-    await registrarLogAuditoria("EXCLUIR", "lotacoes", id, `Excluiu a lotação: ${siglaAntiga}`);
+    await registrarLogAuditoria("EXCLUIR", "lotacoes", id, `Excluiu (logicamente) a lotação: ${siglaAntiga}`);
     
     revalidatePath("/cargos-lotacoes");
     return { sucesso: true };

@@ -9,16 +9,22 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { registrarLogAuditoria } from "./auditoria";
 
+// IMPORT DA NOSSA CENTRAL DE FORMATAÇÃO 🚀
+import { formatarDataInput } from "../utils/formatters";
+
 // ==========================================
 // DEPENDENTES E PENSIONISTAS
 // ==========================================
 
 export async function salvarDependente(formData: FormData) {
   const servidorId = formData.get("servidorId") as string;
-  const nome = formData.get("nome") as string;
   const tipo = formData.get("tipo") as "DEPENDENTE" | "PENSIONISTA";
-  const parentesco = formData.get("parentesco") as string;
-  const documentoReferencia = formData.get("documentoReferencia") as string;
+  
+  // BLINDAGEM DE TEXTOS
+  const nome = (formData.get("nome") as string)?.trim().toUpperCase();
+  const parentesco = (formData.get("parentesco") as string)?.trim().toUpperCase();
+  const documentoReferencia = (formData.get("documentoReferencia") as string)?.trim().toUpperCase();
+  
   const novoId = randomUUID();
 
   try {
@@ -42,10 +48,12 @@ export async function salvarDependente(formData: FormData) {
 export async function atualizarDependente(formData: FormData) {
   const id = formData.get("id") as string;
   const servidorId = formData.get("servidorId") as string;
-  const nome = formData.get("nome") as string;
   const tipo = formData.get("tipo") as "DEPENDENTE" | "PENSIONISTA";
-  const parentesco = formData.get("parentesco") as string;
-  const documentoReferencia = formData.get("documentoReferencia") as string;
+  
+  // BLINDAGEM DE TEXTOS
+  const nome = (formData.get("nome") as string)?.trim().toUpperCase();
+  const parentesco = (formData.get("parentesco") as string)?.trim().toUpperCase();
+  const documentoReferencia = (formData.get("documentoReferencia") as string)?.trim().toUpperCase();
 
   try {
     await db.update(dependentesPensionistas).set({
@@ -66,8 +74,13 @@ export async function atualizarDependente(formData: FormData) {
 
 export async function excluirDependente(id: string, detalhes: string) {
   try {
-    await db.delete(dependentesPensionistas).where(eq(dependentesPensionistas.id, id));
-    await registrarLogAuditoria("EXCLUIR", "dependentes_pensionistas", id, `Excluiu o dependente: ${detalhes}`);
+    // 🛡️ SOFT DELETE ENTERPRISE 🛡️
+    // Em vez de apagar do banco e perder histórico de pensão, apenas marca como excluído!
+    await db.update(dependentesPensionistas)
+      .set({ excluidoEm: new Date().toISOString() })
+      .where(eq(dependentesPensionistas.id, id));
+      
+    await registrarLogAuditoria("EXCLUIR", "dependentes_pensionistas", id, `Excluiu (logicamente) o dependente: ${detalhes}`);
     return { sucesso: true };
   } catch (error) {
     return { erro: "Erro ao excluir o dependente." };
@@ -80,9 +93,11 @@ export async function excluirDependente(id: string, detalhes: string) {
 
 export async function registrarDesligamento(formData: FormData) {
   const servidorId = formData.get("servidorId") as string;
-  const dataDesligamento = formData.get("dataDesligamento") as string;
-  const motivoDesligamento = formData.get("motivoDesligamento") as string;
-  const numeroProcessoDesligamento = formData.get("numeroProcessoDesligamento") as string;
+  
+  // BLINDAGEM DE DATAS E TEXTOS
+  const dataDesligamento = formatarDataInput(formData.get("dataDesligamento") as string);
+  const motivoDesligamento = (formData.get("motivoDesligamento") as string)?.trim().toUpperCase();
+  const numeroProcessoDesligamento = (formData.get("numeroProcessoDesligamento") as string)?.trim().toUpperCase();
 
   try {
     await db.update(servidores).set({
@@ -103,9 +118,11 @@ export async function registrarDesligamento(formData: FormData) {
 
 export async function atualizarDesligamento(formData: FormData) {
   const servidorId = formData.get("servidorId") as string;
-  const dataDesligamento = formData.get("dataDesligamento") as string;
-  const motivoDesligamento = formData.get("motivoDesligamento") as string;
-  const numeroProcessoDesligamento = formData.get("numeroProcessoDesligamento") as string;
+  
+  // BLINDAGEM DE DATAS E TEXTOS
+  const dataDesligamento = formatarDataInput(formData.get("dataDesligamento") as string);
+  const motivoDesligamento = (formData.get("motivoDesligamento") as string)?.trim().toUpperCase();
+  const numeroProcessoDesligamento = (formData.get("numeroProcessoDesligamento") as string)?.trim().toUpperCase();
 
   try {
     await db.update(servidores).set({
@@ -123,7 +140,7 @@ export async function atualizarDesligamento(formData: FormData) {
   redirect(`/servidores/${servidorId}`);
 }
 
-// Excluir o desligamento significa reativar o servidor
+// Excluir o desligamento significa reativar o servidor (já era um Update, então está seguro)
 export async function excluirDesligamento(servidorId: string, detalhes: string) {
   try {
     await db.update(servidores).set({

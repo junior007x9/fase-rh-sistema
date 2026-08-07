@@ -6,16 +6,21 @@ import { eventosAusencia } from "../../db/schema";
 import { eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation"; // <-- Necessário para a edição
-import { registrarLogAuditoria } from "./auditoria"; // <-- Auditoria adicionada
+import { redirect } from "next/navigation"; 
+import { registrarLogAuditoria } from "./auditoria"; 
+
+// IMPORT DA NOSSA CENTRAL DE FORMATAÇÃO 🚀
+import { formatarDataInput } from "../utils/formatters";
 
 // 1. Função Original: REGISTRAR
 export async function registrarAusencia(formData: FormData) {
   const servidorId = formData.get("servidorId") as string;
   const tipoAusencia = formData.get("tipoAusencia") as "FERIAS" | "LICENCA_MATERNIDADE" | "SAUDE" | "LICENCA_PREMIO" | "AFASTAMENTO_SUPERIOR_15";
-  const dataInicio = formData.get("dataInicio") as string;
-  const dataFim = formData.get("dataFim") as string;
-  const observacao = formData.get("observacao") as string;
+  
+  // BLINDAGEM DE DATAS E TEXTOS
+  const dataInicio = formatarDataInput(formData.get("dataInicio") as string);
+  const dataFim = formatarDataInput(formData.get("dataFim") as string);
+  const observacao = (formData.get("observacao") as string)?.trim().toUpperCase();
 
   if (!servidorId || !tipoAusencia || !dataInicio || !dataFim) {
     throw new Error("Preencha todos os campos obrigatórios.");
@@ -52,9 +57,11 @@ export async function atualizarAusencia(formData: FormData) {
   const id = formData.get("id") as string;
   const servidorId = formData.get("servidorId") as string;
   const tipoAusencia = formData.get("tipoAusencia") as "FERIAS" | "LICENCA_MATERNIDADE" | "SAUDE" | "LICENCA_PREMIO" | "AFASTAMENTO_SUPERIOR_15";
-  const dataInicio = formData.get("dataInicio") as string;
-  const dataFim = formData.get("dataFim") as string;
-  const observacao = formData.get("observacao") as string;
+  
+  // BLINDAGEM DE DATAS E TEXTOS
+  const dataInicio = formatarDataInput(formData.get("dataInicio") as string);
+  const dataFim = formatarDataInput(formData.get("dataFim") as string);
+  const observacao = (formData.get("observacao") as string)?.trim().toUpperCase();
 
   try {
     await db.update(eventosAusencia).set({
@@ -81,10 +88,13 @@ export async function atualizarAusencia(formData: FormData) {
 // ==========================================
 export async function excluirAusencia(id: string, detalhes: string) {
   try {
-    await db.delete(eventosAusencia).where(eq(eventosAusencia.id, id));
+    // 🛡️ SOFT DELETE ENTERPRISE 🛡️
+    await db.update(eventosAusencia)
+      .set({ excluidoEm: new Date().toISOString() })
+      .where(eq(eventosAusencia.id, id));
     
     // Registra na auditoria
-    await registrarLogAuditoria("EXCLUIR", "eventosAusencia", id, `Excluiu o registro de férias/ausência: ${detalhes}`);
+    await registrarLogAuditoria("EXCLUIR", "eventosAusencia", id, `Excluiu (logicamente) o registro de férias/ausência: ${detalhes}`);
     
     revalidatePath("/controle-ferias");
     revalidatePath("/ferias");

@@ -72,8 +72,12 @@ export async function atualizarPeriodoAquisitivo(formData: FormData) {
 
 export async function excluirPeriodoAquisitivo(id: string, detalhes: string) {
   try {
-    await db.delete(periodosAquisitivos).where(eq(periodosAquisitivos.id, id));
-    await registrarLogAuditoria("EXCLUIR", "periodos_aquisitivos", id, `Excluiu o período aquisitivo: ${detalhes}`);
+    // SOFT DELETE: Atualiza com a data atual em vez de apagar do banco
+    await db.update(periodosAquisitivos)
+      .set({ excluidoEm: new Date().toISOString() })
+      .where(eq(periodosAquisitivos.id, id));
+      
+    await registrarLogAuditoria("EXCLUIR", "periodos_aquisitivos", id, `Excluiu (logicamente) o período aquisitivo: ${detalhes}`);
     
     revalidatePath(`/ausencias`);
     return { sucesso: true };
@@ -215,8 +219,12 @@ export async function atualizarAusencia(formData: FormData) {
 
 export async function excluirAusencia(id: string, detalhes: string) {
   try {
-    await db.delete(eventosAusencia).where(eq(eventosAusencia.id, id));
-    await registrarLogAuditoria("EXCLUIR", "eventos_ausencia", id, `Excluiu a ausência/licença: ${detalhes}`);
+    // SOFT DELETE: Atualiza com a data atual em vez de apagar do banco
+    await db.update(eventosAusencia)
+      .set({ excluidoEm: new Date().toISOString() })
+      .where(eq(eventosAusencia.id, id));
+      
+    await registrarLogAuditoria("EXCLUIR", "eventos_ausencia", id, `Excluiu (logicamente) a ausência/licença: ${detalhes}`);
     
     revalidatePath("/ausencias");
     return { sucesso: true };

@@ -19,7 +19,7 @@ export async function cadastrarServidor(formData: FormData) {
   const servidorId = randomUUID();
 
   // Vínculo Institucional e Base Salarial
-  const matricula = formData.get("matricula") as string;
+  const matricula = (formData.get("matricula") as string)?.trim().toUpperCase();
   const cargo = formData.get("cargo") as string;
   const lotacao = formData.get("lotacao") as string;
   const vinculo = formData.get("vinculo") as "EFETIVO" | "CONTRATADO" | "COMISSIONADO" | "ESTAGIARIO";
@@ -28,7 +28,7 @@ export async function cadastrarServidor(formData: FormData) {
   const dataAdmissao = formatarDataInput(formData.get("dataAdmissao") as string);
   
   // ---> NOVOS CAMPOS <---
-  const funcao = formData.get("funcao") as string;
+  const funcao = (formData.get("funcao") as string)?.trim().toUpperCase();
   const jornada = formData.get("jornada") as string;
   
   // APLICA O FORMATADOR DE DINHEIRO AQUI 👇
@@ -36,15 +36,15 @@ export async function cadastrarServidor(formData: FormData) {
   const remuneracaoFormatada = formatarNumeroInput(remuneracaoRaw);
   const remuneracaoBase = remuneracaoFormatada !== "" ? Number(remuneracaoFormatada) : null;
 
-  // Dados Pessoais
-  const nome = formData.get("nome") as string;
-  const nomeSocial = formData.get("nomeSocial") as string;
+  // Dados Pessoais (com blindagem)
+  const nome = (formData.get("nome") as string)?.trim().toUpperCase();
+  const nomeSocial = (formData.get("nomeSocial") as string)?.trim().toUpperCase();
   
   // APLICA O FORMATADOR DE DATA AQUI 👇
   const dataNascimento = formatarDataInput(formData.get("dataNascimento") as string);
   
-  const email = formData.get("email") as string;
-  const telefone = formData.get("telefone") as string;
+  const email = (formData.get("email") as string)?.trim().toLowerCase();
+  const telefone = (formData.get("telefone") as string)?.trim();
   const tipoSanguineo = formData.get("tipoSanguineo") as string;
   const grupoEtnico = formData.get("grupoEtnico") as string;
   const estadoCivil = formData.get("estadoCivil") as string;
@@ -52,10 +52,10 @@ export async function cadastrarServidor(formData: FormData) {
   const orientacaoSexual = formData.get("orientacaoSexual") as string;
 
   // Documentos
-  const cpf = formData.get("cpf") as string;
-  const rg = formData.get("rg") as string;
-  const tituloEleitoral = formData.get("tituloEleitoral") as string;
-  const pisPasep = formData.get("pisPasep") as string;
+  const cpf = (formData.get("cpf") as string)?.trim();
+  const rg = (formData.get("rg") as string)?.trim();
+  const tituloEleitoral = (formData.get("tituloEleitoral") as string)?.trim();
+  const pisPasep = (formData.get("pisPasep") as string)?.trim();
 
   try {
     await db.insert(servidores).values({
@@ -109,7 +109,7 @@ export async function atualizarServidor(formData: FormData) {
 
   const servidorId = formData.get("id") as string;
 
-  const matricula = formData.get("matricula") as string;
+  const matricula = (formData.get("matricula") as string)?.trim().toUpperCase();
   const cargo = formData.get("cargo") as string;
   const lotacao = formData.get("lotacao") as string;
   const vinculo = formData.get("vinculo") as "EFETIVO" | "CONTRATADO" | "COMISSIONADO" | "ESTAGIARIO";
@@ -118,7 +118,7 @@ export async function atualizarServidor(formData: FormData) {
   const dataAdmissao = formatarDataInput(formData.get("dataAdmissao") as string);
 
   // ---> NOVOS CAMPOS <---
-  const funcao = formData.get("funcao") as string;
+  const funcao = (formData.get("funcao") as string)?.trim().toUpperCase();
   const jornada = formData.get("jornada") as string;
   
   // APLICA O FORMATADOR DE DINHEIRO AQUI 👇
@@ -126,24 +126,24 @@ export async function atualizarServidor(formData: FormData) {
   const remuneracaoFormatada = formatarNumeroInput(remuneracaoRaw);
   const remuneracaoBase = remuneracaoFormatada !== "" ? Number(remuneracaoFormatada) : null;
 
-  const nome = formData.get("nome") as string;
-  const nomeSocial = formData.get("nomeSocial") as string;
+  const nome = (formData.get("nome") as string)?.trim().toUpperCase();
+  const nomeSocial = (formData.get("nomeSocial") as string)?.trim().toUpperCase();
   
   // APLICA O FORMATADOR DE DATA AQUI 👇
   const dataNascimento = formatarDataInput(formData.get("dataNascimento") as string);
   
-  const email = formData.get("email") as string;
-  const telefone = formData.get("telefone") as string;
+  const email = (formData.get("email") as string)?.trim().toLowerCase();
+  const telefone = (formData.get("telefone") as string)?.trim();
   const tipoSanguineo = formData.get("tipoSanguineo") as string;
   const grupoEtnico = formData.get("grupoEtnico") as string;
   const estadoCivil = formData.get("estadoCivil") as string;
   const genero = formData.get("genero") as string;
   const orientacaoSexual = formData.get("orientacaoSexual") as string;
 
-  const cpf = formData.get("cpf") as string;
-  const rg = formData.get("rg") as string;
-  const tituloEleitoral = formData.get("tituloEleitoral") as string;
-  const pisPasep = formData.get("pisPasep") as string;
+  const cpf = (formData.get("cpf") as string)?.trim();
+  const rg = (formData.get("rg") as string)?.trim();
+  const tituloEleitoral = (formData.get("tituloEleitoral") as string)?.trim();
+  const pisPasep = (formData.get("pisPasep") as string)?.trim();
 
   try {
     await db.update(servidores).set({
@@ -189,15 +189,17 @@ export async function atualizarServidor(formData: FormData) {
 
 export async function excluirServidor(id: string, nome: string) {
   try {
-    await db.delete(documentos).where(eq(documentos.servidorId, id));
-    await db.delete(dadosPessoais).where(eq(dadosPessoais.servidorId, id));
-    await db.delete(servidores).where(eq(servidores.id, id));
+    // 🛡️ SOFT DELETE ENTERPRISE 🛡️
+    // Em vez de explodir o servidor, seus dependentes e documentos, nós apenas "desativamos" ele!
+    await db.update(servidores)
+      .set({ excluidoEm: new Date().toISOString() })
+      .where(eq(servidores.id, id));
     
-    await registrarLogAuditoria("EXCLUIR", "servidores", id, `Excluiu permanentemente o servidor: ${nome}`);
+    await registrarLogAuditoria("EXCLUIR", "servidores", id, `Excluiu (logicamente) o servidor: ${nome}`);
     
     revalidatePath("/servidores");
     return { sucesso: true };
   } catch (error) {
-    return { erro: "Erro ao excluir. Este servidor possui vínculos ativos." };
+    return { erro: "Erro ao excluir servidor." };
   }
 }

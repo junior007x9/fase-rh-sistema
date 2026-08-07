@@ -19,25 +19,10 @@ import { salvarEndereco, atualizarEndereco, excluirEndereco, salvarContaBancaria
 import { salvarDependente, atualizarDependente, excluirDependente, registrarDesligamento, atualizarDesligamento, excluirDesligamento } from "../../actions/complementos";
 import { registrarTransferencia } from "../../actions/folha";
 
+// IMPORT DA NOSSA CENTRAL DE FORMATAÇÃO 🚀
+import { formatarMoedaExibicao, formatarDataExibicao, calcularTempoDeCasa } from "../../utils/formatters";
+
 export const dynamic = "force-dynamic";
-
-function formatarMoeda(valor: number | null | undefined) {
-  if (valor === null || valor === undefined) return "Não informada";
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
-}
-
-function calcularTempoDeCasa(admissao: string, desligamento: string | null) {
-  const dataInicio = new Date(admissao);
-  const dataFim = desligamento ? new Date(desligamento) : new Date();
-  let anos = dataFim.getFullYear() - dataInicio.getFullYear();
-  let meses = dataFim.getMonth() - dataInicio.getMonth();
-  if (meses < 0) {
-    anos--;
-    meses += 12;
-  }
-  if (anos === 0 && meses === 0) return "Menos de 1 mês";
-  return `${anos > 0 ? `${anos} ano(s)` : ''} ${meses > 0 ? `e ${meses} mês(es)` : ''}`.trim();
-}
 
 export default async function PerfilServidorPage({ 
   params, 
@@ -101,6 +86,7 @@ export default async function PerfilServidorPage({
     return <div className="p-8 text-center text-red-500 font-bold">Servidor não encontrado.</div>;
   }
 
+  // Usando a nossa Central de Formatação
   const tempoCasa = calcularTempoDeCasa(servidorBase.dataAdmissao, servidorBase.dataDesligamento);
   const dependenteEditando = editarDependenteId ? listaDependentes.find(d => d.id === editarDependenteId) : null;
 
@@ -135,7 +121,7 @@ export default async function PerfilServidorPage({
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Nova Lotação (Para onde vai?) *</label>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Nova Lotação (Para onde vai?) *</label>
                   <select name="lotacaoNova" required className="w-full border border-slate-200 p-3 text-sm rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors text-slate-700">
                     <option value="">Selecione o novo setor...</option>
                     {listaLotacoes.map((l) => (
@@ -144,11 +130,11 @@ export default async function PerfilServidorPage({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Data da Transferência *</label>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Data da Transferência *</label>
                   <input type="date" name="dataOcorrencia" required className="w-full border border-slate-200 p-3 text-sm rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors text-slate-700" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Motivo / Documento (Opcional)</label>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Motivo / Documento (Opcional)</label>
                   <input type="text" name="motivo" placeholder="Ex: Portaria Nº 123/2026..." className="w-full border border-slate-200 p-3 text-sm rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors text-slate-700" />
                 </div>
               </div>
@@ -246,7 +232,7 @@ export default async function PerfilServidorPage({
               <div className="col-span-2"><span className="font-bold block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Cargo Efetivo / Contratado</span><span className="font-medium">{servidorBase.cargo || "Não informado"}</span></div>
               
               <div><span className="font-bold block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Lotação Atual</span>{servidorBase.lotacao || "Não informada"}</div>
-              <div><span className="font-bold block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Data de Admissão</span>{servidorBase.dataAdmissao?.split('-').reverse().join('/') || "Não informada"}</div>
+              <div><span className="font-bold block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Data de Admissão</span>{formatarDataExibicao(servidorBase.dataAdmissao) || "Não informada"}</div>
               
               <div className="col-span-2 border-t border-slate-100 pt-5 mt-1 grid grid-cols-2 gap-5">
                 <div className="col-span-2"><span className="font-bold block text-[10px] text-slate-400 uppercase tracking-widest mb-1.5">Função (Comissionada/Gratificada)</span>
@@ -260,7 +246,7 @@ export default async function PerfilServidorPage({
                 </div>
                 <div>
                   <span className="font-bold block text-[10px] text-emerald-600 uppercase tracking-widest mb-1 flex items-center gap-1.5"><DollarSign size={12}/> Remuneração Base</span>
-                  <span className="text-lg font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100 block w-fit">{formatarMoeda(servidorBase.remuneracaoBase)}</span>
+                  <span className="text-lg font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100 block w-fit">{formatarMoedaExibicao(servidorBase.remuneracaoBase)}</span>
                 </div>
               </div>
             </div>
@@ -291,7 +277,7 @@ export default async function PerfilServidorPage({
                     <div className="flex justify-between items-start mb-2">
                       <p className="text-sm font-bold text-slate-800">{mov.lotacaoNova}</p>
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-white px-2 py-1 rounded-md border border-slate-200 shadow-sm">
-                        {mov.dataOcorrencia.split('-').reverse().join('/')}
+                        {formatarDataExibicao(mov.dataOcorrencia)}
                       </span>
                     </div>
                     <p className="text-xs text-slate-600">
@@ -521,7 +507,7 @@ export default async function PerfilServidorPage({
             
             {servidorBase.status === 'DESLIGADO' && !editarDesligamento ? (
               <div className="text-sm text-red-800 space-y-3 p-5 bg-red-50 rounded-xl border border-red-100">
-                <p className="flex justify-between items-end border-b border-red-200/50 pb-2"><span className="font-bold text-[10px] text-red-500/80 uppercase tracking-widest">Data do Desligamento</span> <span className="font-extrabold text-right">{servidorBase.dataDesligamento?.split('-').reverse().join('/')}</span></p>
+                <p className="flex justify-between items-end border-b border-red-200/50 pb-2"><span className="font-bold text-[10px] text-red-500/80 uppercase tracking-widest">Data do Desligamento</span> <span className="font-extrabold text-right">{formatarDataExibicao(servidorBase.dataDesligamento)}</span></p>
                 <p className="flex justify-between items-end border-b border-red-200/50 pb-2"><span className="font-bold text-[10px] text-red-500/80 uppercase tracking-widest">Motivo</span> <span className="font-semibold text-right">{servidorBase.motivoDesligamento}</span></p>
                 {servidorBase.numeroProcessoDesligamento && <p className="flex justify-between items-end"><span className="font-bold text-[10px] text-red-500/80 uppercase tracking-widest">Nº Processo</span> <span className="font-semibold text-right">{servidorBase.numeroProcessoDesligamento}</span></p>}
               </div>

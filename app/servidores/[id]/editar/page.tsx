@@ -7,6 +7,9 @@ import Link from "next/link";
 import { ArrowLeft, User, FileText, Briefcase, Heart, Save, Clock, DollarSign } from "lucide-react";
 import { redirect } from "next/navigation";
 
+// IMPORT DA NOSSA CENTRAL DE FORMATAÇÃO 🚀
+import { formatarDataInput, formatarNumeroInput } from "../../../utils/formatters";
+
 export const dynamic = "force-dynamic";
 
 export default async function EditarServidorPage({ params }: { params: Promise<{ id: string }> }) {
@@ -22,7 +25,7 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
     redirect("/servidores");
   }
 
-  // 1. SEGURANÇA: Busca cargos da tabela oficial ou extrai dos servidores se estiver vazia
+  // Busca as tabelas oficiais ou injeta os dados reais para evitar telas em branco
   let listaCargos = await db.select().from(cargos);
   if (listaCargos.length === 0) {
     const todosCargos = await db.select({ cargo: servidores.cargo }).from(servidores);
@@ -30,7 +33,6 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
     listaCargos = cargosUnicos.map((nome, index) => ({ id: String(index), nome, descricao: null, criadoEm: null }));
   }
 
-  // 2. SEGURANÇA: Busca lotações da tabela oficial ou extrai dos servidores se estiver vazia
   let listaLotacoes = await db.select().from(lotacoes);
   if (listaLotacoes.length === 0) {
     const todasLotacoes = await db.select({ lotacao: servidores.lotacao }).from(servidores);
@@ -56,7 +58,6 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
 
       {/* FORMULÁRIO */}
       <form action={atualizarServidor} className="space-y-8">
-        
         <input type="hidden" name="id" value={servidorId} />
 
         {/* SESSÃO 1: DADOS PESSOAIS */}
@@ -76,7 +77,7 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Data de Nascimento *</label>
-              <input type="date" name="dataNascimento" defaultValue={pessoal.dataNascimento || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700" />
+              <input type="date" name="dataNascimento" defaultValue={formatarDataInput(pessoal.dataNascimento)} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700" />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Telefone *</label>
@@ -132,6 +133,10 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
                 <option value="NAO_BINARIO">Não Binário</option>
                 <option value="OUTRO">Outro</option>
                 <option value="PREFIRO_NAO_INFORMAR">Prefiro não informar</option>
+                {/* Fallback de Segurança */}
+                {pessoal.genero && !["MASCULINO_CISGENERO", "FEMININO_CISGENERO", "MASCULINO_TRANSGENERO", "FEMININO_TRANSGENERO", "NAO_BINARIO", "OUTRO", "PREFIRO_NAO_INFORMAR"].includes(pessoal.genero) && (
+                  <option value={pessoal.genero}>{pessoal.genero}</option>
+                )}
               </select>
             </div>
             <div>
@@ -142,6 +147,9 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
                 <option value="BISSEXUAL">Bissexual</option>
                 <option value="OUTRO">Outro</option>
                 <option value="PREFIRO_NAO_INFORMAR">Prefiro não informar</option>
+                {pessoal.orientacaoSexual && !["HETEROSSEXUAL", "HOMOSSEXUAL", "BISSEXUAL", "OUTRO", "PREFIRO_NAO_INFORMAR"].includes(pessoal.orientacaoSexual) && (
+                  <option value={pessoal.orientacaoSexual}>{pessoal.orientacaoSexual}</option>
+                )}
               </select>
             </div>
             <div>
@@ -153,6 +161,9 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
                 <option value="AMARELA">Amarela</option>
                 <option value="INDIGENA">Indígena</option>
                 <option value="PREFIRO_NAO_INFORMAR">Prefiro não informar</option>
+                {pessoal.grupoEtnico && !["BRANCA", "PRETA", "PARDA", "AMARELA", "INDIGENA", "PREFIRO_NAO_INFORMAR"].includes(pessoal.grupoEtnico) && (
+                  <option value={pessoal.grupoEtnico}>{pessoal.grupoEtnico}</option>
+                )}
               </select>
             </div>
             <div>
@@ -163,6 +174,9 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
                 <option value="DIVORCIADO">Divorciado(a)</option>
                 <option value="VIUVO">Viúvo(a)</option>
                 <option value="UNIAO_ESTAVEL">União Estável</option>
+                {pessoal.estadoCivil && !["SOLTEIRO", "CASADO", "DIVORCIADO", "VIUVO", "UNIAO_ESTAVEL"].includes(pessoal.estadoCivil) && (
+                  <option value={pessoal.estadoCivil}>{pessoal.estadoCivil}</option>
+                )}
               </select>
             </div>
             <div>
@@ -173,6 +187,9 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
                 <option value="B+">B+</option><option value="B-">B-</option>
                 <option value="AB+">AB+</option><option value="AB-">AB-</option>
                 <option value="O+">O+</option><option value="O-">O-</option>
+                {pessoal.tipoSanguineo && !["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].includes(pessoal.tipoSanguineo) && (
+                  <option value={pessoal.tipoSanguineo}>{pessoal.tipoSanguineo}</option>
+                )}
               </select>
             </div>
           </div>
@@ -200,13 +217,16 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
                 <option value="CONTRATADO">Contratado</option>
                 <option value="COMISSIONADO">Comissionado</option>
                 <option value="ESTAGIARIO">Estagiário</option>
+                {servidorBase.vinculo && !["EFETIVO", "CONTRATADO", "COMISSIONADO", "ESTAGIARIO"].includes(servidorBase.vinculo.toUpperCase()) && (
+                  <option value={servidorBase.vinculo}>{servidorBase.vinculo}</option>
+                )}
               </select>
             </div>
 
             {/* Data de Admissão */}
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Data de Admissão *</label>
-              <input type="date" name="dataAdmissao" defaultValue={servidorBase.dataAdmissao || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700 font-semibold" />
+              <input type="date" name="dataAdmissao" defaultValue={formatarDataInput(servidorBase.dataAdmissao)} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700 font-semibold" />
             </div>
             
             {/* Cargo */}
@@ -214,6 +234,9 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
               <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Cargo *</label>
               <select name="cargo" defaultValue={servidorBase.cargo || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700 font-semibold">
                 <option value="">Selecione um cargo...</option>
+                {servidorBase.cargo && !listaCargos.some(c => c.nome === servidorBase.cargo) && (
+                  <option value={servidorBase.cargo}>{servidorBase.cargo}</option>
+                )}
                 {listaCargos.map((c) => (
                   <option key={c.id} value={c.nome}>{c.nome}</option>
                 ))}
@@ -225,6 +248,9 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
               <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Lotação (Setor/Secretaria) *</label>
               <select name="lotacao" defaultValue={servidorBase.lotacao || ""} required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700 font-semibold">
                 <option value="">Selecione uma lotação...</option>
+                {servidorBase.lotacao && !listaLotacoes.some(l => l.nome === servidorBase.lotacao) && (
+                  <option value={servidorBase.lotacao}>{servidorBase.lotacao}</option>
+                )}
                 {listaLotacoes.map((l) => (
                   <option key={l.id} value={l.nome}>{l.nome}</option>
                 ))}
@@ -249,6 +275,9 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
                 <option value="40h Semanais">40h Semanais</option>
                 <option value="12x36 (Plantão)">12x36 (Plantão)</option>
                 <option value="24x72 (Plantão)">24x72 (Plantão)</option>
+                {servidorBase.jornada && !["20h Semanais", "30h Semanais", "40h Semanais", "12x36 (Plantão)", "24x72 (Plantão)"].includes(servidorBase.jornada) && (
+                  <option value={servidorBase.jornada}>{servidorBase.jornada}</option>
+                )}
               </select>
             </div>
 
@@ -264,7 +293,7 @@ export default async function EditarServidorPage({ params }: { params: Promise<{
                   step="0.01" 
                   min="0" 
                   name="remuneracaoBase" 
-                  defaultValue={servidorBase.remuneracaoBase ?? ""} 
+                  defaultValue={formatarNumeroInput(servidorBase.remuneracaoBase)} 
                   required 
                   placeholder="0.00" 
                   className="w-full border border-slate-200 rounded-xl p-3 pl-11 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 text-slate-800 font-bold" 

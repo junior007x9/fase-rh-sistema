@@ -8,11 +8,10 @@ import { EVENTOS_FOLHA } from "../../utils/calculosFolha";
 import { adicionarLancamentoFolha, excluirLancamentoFolha, processarFerias, processarRescisao } from "../../actions/folha";
 import BotaoImprimirContracheque from "../../components/BotaoImprimirContracheque";
 
-export const dynamic = "force-dynamic";
+// IMPORT DA NOSSA CENTRAL DE FORMATAÇÃO 🚀
+import { formatarMoedaExibicao, formatarDataExibicao } from "../../utils/formatters";
 
-function formatarMoeda(valor: number) {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
-}
+export const dynamic = "force-dynamic";
 
 export default async function FolhaServidorPage({ 
   params, searchParams 
@@ -65,7 +64,7 @@ export default async function FolhaServidorPage({
               <input type="hidden" name="mesAno" value={mesAno} />
               
               <div className="bg-orange-50 text-orange-800 text-sm p-4 rounded-lg border border-orange-100 mb-6">
-                <strong>Automação:</strong> O sistema verificará a data de admissão ({srv.dataAdmissao?.split('-').reverse().join('/')}) e calculará as férias <strong>Integrais</strong> (se &gt;12 meses) ou <strong>Proporcionais em Avos</strong>, inserindo também o 1/3 Constitucional.
+                <strong>Automação:</strong> O sistema verificará a data de admissão ({formatarDataExibicao(srv.dataAdmissao)}) e calculará as férias <strong>Integrais</strong> (se &gt;12 meses) ou <strong>Proporcionais em Avos</strong>, inserindo também o 1/3 Constitucional.
               </div>
               
               <div>
@@ -264,7 +263,7 @@ export default async function FolhaServidorPage({
                     <td className="px-4 py-3 text-center text-gray-500">001</td>
                     <td className="px-4 py-3 font-semibold text-gray-800">Salário Base</td>
                     <td className="px-4 py-3 text-center text-gray-500">30d</td>
-                    <td className="px-4 py-3 text-right font-medium text-green-700">{formatarMoeda(salarioBase)}</td>
+                    <td className="px-4 py-3 text-right font-medium text-green-700">{formatarMoedaExibicao(salarioBase)}</td>
                     <td className="px-4 py-3 text-right text-gray-400">-</td>
                     <td className="px-2 py-3"></td>
                   </tr>
@@ -281,10 +280,10 @@ export default async function FolhaServidorPage({
                       <td className="px-4 py-3 text-gray-800">{lan.descricaoEvento}</td>
                       <td className="px-4 py-3 text-center text-gray-500">{lan.quantidadeReferencia || '-'}</td>
                       <td className="px-4 py-3 text-right font-medium text-green-700">
-                        {lan.tipo === 'PROVENTO' ? formatarMoeda(lan.valorFinal) : '-'}
+                        {lan.tipo === 'PROVENTO' ? formatarMoedaExibicao(lan.valorFinal) : '-'}
                       </td>
                       <td className="px-4 py-3 text-right font-medium text-red-700">
-                        {lan.tipo === 'DESCONTO' ? formatarMoeda(lan.valorFinal) : '-'}
+                        {lan.tipo === 'DESCONTO' ? formatarMoedaExibicao(lan.valorFinal) : '-'}
                       </td>
                       <td className="px-2 py-3 text-center">
                         <form action={excluirAction}>
@@ -302,15 +301,15 @@ export default async function FolhaServidorPage({
             <div className="bg-gray-100 border-t border-gray-300 p-4 grid grid-cols-3 gap-4">
               <div className="col-span-1">
                 <p className="text-xs text-gray-500 uppercase mb-1">Total de Proventos</p>
-                <p className="font-bold text-green-700 text-lg">{formatarMoeda(totalProventos)}</p>
+                <p className="font-bold text-green-700 text-lg">{formatarMoedaExibicao(totalProventos)}</p>
               </div>
               <div className="col-span-1 border-l border-gray-300 pl-4">
                 <p className="text-xs text-gray-500 uppercase mb-1">Total de Descontos</p>
-                <p className="font-bold text-red-700 text-lg">{formatarMoeda(totalDescontos)}</p>
+                <p className="font-bold text-red-700 text-lg">{formatarMoedaExibicao(totalDescontos)}</p>
               </div>
               <div className="col-span-1 border-l border-gray-300 pl-4 bg-emerald-50 rounded-r-lg -mr-4 -my-4 p-4 border-l-emerald-200">
                 <p className="text-xs text-emerald-800 uppercase font-bold mb-1">Valor Líquido a Receber</p>
-                <p className="font-black text-emerald-900 text-2xl">{formatarMoeda(salarioLiquido)}</p>
+                <p className="font-black text-emerald-900 text-2xl">{formatarMoedaExibicao(salarioLiquido)}</p>
               </div>
             </div>
 

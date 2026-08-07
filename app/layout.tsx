@@ -4,8 +4,8 @@ import Link from "next/link";
 import { getSessaoUsuario } from "./actions/auth";
 import { 
   LayoutDashboard, Users, Briefcase, Calendar, 
-  Clock, FileText, BarChart3, Shield, UserPlus, LogOut,
-  Banknote
+  Clock, BarChart3, Shield, UserPlus, LogOut,
+  Banknote, ClipboardList
 } from "lucide-react";
 import LoginPage from "./login/page";
 
@@ -13,20 +13,6 @@ export const metadata = {
   title: 'FASE-MA RH Sistema',
   description: 'Sistema de Gestão de Recursos Humanos',
 };
-
-// ARRAY DE LINKS ORGANIZADO PARA COMPUTADOR E CELULAR
-const MENU_LINKS = [
-  { href: "/", icon: LayoutDashboard, labelFull: "Início", labelMobile: "Início" },
-  { href: "/servidores", icon: Users, labelFull: "Servidores", labelMobile: "Servidores" },
-  { href: "/cargos-lotacoes", icon: Briefcase, labelFull: "Cargos e Lotações", labelMobile: "Lotações" },
-  { href: "/ferias", icon: Calendar, labelFull: "Controle de Férias", labelMobile: "Férias" },
-  { href: "/ausencias", icon: Clock, labelFull: "Ausências e Licenças", labelMobile: "Ausências" },
-  { href: "/folha", icon: Banknote, labelFull: "Folha de Pagamento", labelMobile: "Folha" },
-  { href: "/importacao", icon: FileText, labelFull: "Importar Planilha", labelMobile: "Planilha" },
-  { href: "/relatorios", icon: BarChart3, labelFull: "Relatórios", labelMobile: "Relatórios" },
-  { href: "/gestao-acessos", icon: Shield, labelFull: "Gestão de Acessos", labelMobile: "Acessos" },
-  { href: "/recrutamento", icon: UserPlus, labelFull: "Recrutamento", labelMobile: "Recrutar" },
-];
 
 export default async function RootLayout({
   children,
@@ -47,6 +33,33 @@ export default async function RootLayout({
       </html>
     );
   }
+
+  // =========================================================================
+  // LÓGICA DE PERMISSÃO CORRIGIDA: Verifica se o Nível de Acesso é "DIRETORIA"
+  // =========================================================================
+  const temAcessoTotal = 
+    sessao?.role === 'DIRETORIA' || 
+    sessao?.nivelAcesso === 'DIRETORIA' || 
+    sessao?.cargo === 'DIRETORIA' || 
+    sessao?.perfil === 'DIRETORIA' ||
+    sessao?.role === 'ADMIN'; // Mantido ADMIN por segurança caso tenha outro
+
+  // ARRAY DE LINKS CONSTRUÍDO DINAMICAMENTE
+  const MENU_LINKS = [
+    { href: "/", icon: LayoutDashboard, labelFull: "Início", labelMobile: "Início" },
+    { href: "/servidores", icon: Users, labelFull: "Servidores", labelMobile: "Servidores" },
+    { href: "/cargos-lotacoes", icon: Briefcase, labelFull: "Cargos e Lotações", labelMobile: "Lotações" },
+    { href: "/ferias", icon: Calendar, labelFull: "Controle de Férias", labelMobile: "Férias" },
+    { href: "/ausencias", icon: Clock, labelFull: "Ausências e Licenças", labelMobile: "Ausências" },
+    { href: "/folha", icon: Banknote, labelFull: "Folha de Pagamento", labelMobile: "Folha" },
+    { href: "/relatorios", icon: BarChart3, labelFull: "Relatórios", labelMobile: "Relatórios" },
+    
+    // 👇 AUDITORIA AGORA APARECERÁ PARA QUEM TEM A ROLE "DIRETORIA"
+    ...(temAcessoTotal ? [{ href: "/auditoria", icon: ClipboardList, labelFull: "Auditoria do Sistema", labelMobile: "Auditoria" }] : []),
+    
+    { href: "/gestao-acessos", icon: Shield, labelFull: "Gestão de Acessos", labelMobile: "Acessos" },
+    { href: "/recrutamento", icon: UserPlus, labelFull: "Recrutamento", labelMobile: "Recrutar" },
+  ];
 
   // SE ESTIVER LOGADO, EXIBE O SISTEMA
   return (

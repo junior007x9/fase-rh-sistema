@@ -1,16 +1,29 @@
 // Arquivo: app/servidores/novo/page.tsx
 import { cadastrarServidor } from "../../actions/servidores";
 import { db } from "../../../db/index";
-import { cargos, lotacoes } from "../../../db/schema";
+import { cargos, lotacoes, servidores } from "../../../db/schema";
 import Link from "next/link";
 import { ArrowLeft, User, FileText, Briefcase, Heart, Save, DollarSign, Clock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function NovoServidorPage() {
-  // Buscando as listas direto do banco de dados
-  const listaCargos = await db.select().from(cargos);
-  const listaLotacoes = await db.select().from(lotacoes);
+  // ============================================================================
+  // SEGURANÇA: Busca listas oficiais. Se vazias, extrai os valores já cadastrados
+  // ============================================================================
+  let listaCargos = await db.select().from(cargos);
+  if (listaCargos.length === 0) {
+    const todosCargos = await db.select({ cargo: servidores.cargo }).from(servidores);
+    const cargosUnicos = Array.from(new Set(todosCargos.map(s => s.cargo).filter(Boolean))) as string[];
+    listaCargos = cargosUnicos.map((nome, index) => ({ id: String(index), nome, descricao: null, criadoEm: null }));
+  }
+
+  let listaLotacoes = await db.select().from(lotacoes);
+  if (listaLotacoes.length === 0) {
+    const todasLotacoes = await db.select({ lotacao: servidores.lotacao }).from(servidores);
+    const lotacoesUnicas = Array.from(new Set(todasLotacoes.map(s => s.lotacao).filter(Boolean))) as string[];
+    listaLotacoes = lotacoesUnicas.map((nome, index) => ({ id: String(index), nome, sigla: "", criadoEm: null }));
+  }
 
   return (
     <div className="max-w-5xl mx-auto pb-12 space-y-6 animate-in fade-in duration-500">
@@ -39,24 +52,24 @@ export default async function NovoServidorPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Nome Completo *</label>
-              <input type="text" name="nome" required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors" />
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Nome Completo *</label>
+              <input type="text" name="nome" required className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white bg-slate-50 transition-colors text-slate-700 font-medium" />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Nome Social (Opcional)</label>
-              <input type="text" name="nomeSocial" className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors" />
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Nome Social (Opcional)</label>
+              <input type="text" name="nomeSocial" className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white bg-slate-50 transition-colors text-slate-700" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Data de Nascimento *</label>
-              <input type="date" name="dataNascimento" required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700" />
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Data de Nascimento *</label>
+              <input type="date" name="dataNascimento" required className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white bg-slate-50 transition-colors text-slate-700" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Telefone *</label>
-              <input type="text" name="telefone" required placeholder="(00) 00000-0000" className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors" />
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Telefone *</label>
+              <input type="text" name="telefone" required placeholder="(00) 00000-0000" className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white bg-slate-50 transition-colors text-slate-700" />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-2">E-mail Profissional ou Pessoal *</label>
-              <input type="email" name="email" required placeholder="email@exemplo.com" className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors" />
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">E-mail Profissional ou Pessoal *</label>
+              <input type="email" name="email" required placeholder="email@exemplo.com" className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white bg-slate-50 transition-colors text-slate-700" />
             </div>
           </div>
         </section>
@@ -69,20 +82,20 @@ export default async function NovoServidorPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-2">CPF *</label>
-              <input type="text" name="cpf" required placeholder="000.000.000-00" className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors" />
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">CPF *</label>
+              <input type="text" name="cpf" required placeholder="000.000.000-00" className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white bg-slate-50 transition-colors text-slate-700" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-2">RG *</label>
-              <input type="text" name="rg" required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors" />
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">RG *</label>
+              <input type="text" name="rg" required className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white bg-slate-50 transition-colors text-slate-700" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Título Eleitoral *</label>
-              <input type="text" name="tituloEleitoral" required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors" />
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Título Eleitoral *</label>
+              <input type="text" name="tituloEleitoral" required className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white bg-slate-50 transition-colors text-slate-700" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-2">PIS/PASEP (Opcional)</label>
-              <input type="text" name="pisPasep" className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors" />
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">PIS/PASEP (Opcional)</label>
+              <input type="text" name="pisPasep" className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white bg-slate-50 transition-colors text-slate-700" />
             </div>
           </div>
         </section>
@@ -95,8 +108,8 @@ export default async function NovoServidorPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Gênero *</label>
-              <select name="genero" required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700">
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Gênero *</label>
+              <select name="genero" required className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white bg-slate-50 transition-colors text-slate-700">
                 <option value="MASCULINO_CISGENERO">Masculino Cisgênero</option>
                 <option value="FEMININO_CISGENERO">Feminino Cisgênero</option>
                 <option value="MASCULINO_TRANSGENERO">Masculino Transgênero</option>
@@ -107,8 +120,8 @@ export default async function NovoServidorPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Orientação Sexual *</label>
-              <select name="orientacaoSexual" required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700">
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Orientação Sexual *</label>
+              <select name="orientacaoSexual" required className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white bg-slate-50 transition-colors text-slate-700">
                 <option value="HETEROSSEXUAL">Heterossexual</option>
                 <option value="HOMOSSEXUAL">Homossexual</option>
                 <option value="BISSEXUAL">Bissexual</option>
@@ -117,8 +130,8 @@ export default async function NovoServidorPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Cor/Etnia *</label>
-              <select name="grupoEtnico" required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700">
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Cor/Etnia *</label>
+              <select name="grupoEtnico" required className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white bg-slate-50 transition-colors text-slate-700">
                 <option value="BRANCA">Branca</option>
                 <option value="PRETA">Preta</option>
                 <option value="PARDA">Parda</option>
@@ -128,8 +141,8 @@ export default async function NovoServidorPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Estado Civil *</label>
-              <select name="estadoCivil" required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700">
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Estado Civil *</label>
+              <select name="estadoCivil" required className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white bg-slate-50 transition-colors text-slate-700">
                 <option value="SOLTEIRO">Solteiro(a)</option>
                 <option value="CASADO">Casado(a)</option>
                 <option value="DIVORCIADO">Divorciado(a)</option>
@@ -138,8 +151,8 @@ export default async function NovoServidorPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Tipo Sanguíneo (Opcional)</label>
-              <select name="tipoSanguineo" className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700">
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Tipo Sanguíneo (Opcional)</label>
+              <select name="tipoSanguineo" className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white bg-slate-50 transition-colors text-slate-700">
                 <option value="">Não informado</option>
                 <option value="A+">A+</option><option value="A-">A-</option>
                 <option value="B+">B+</option><option value="B-">B-</option>
@@ -160,12 +173,12 @@ export default async function NovoServidorPage() {
             
             {/* Linha 1 */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Matrícula *</label>
-              <input type="text" name="matricula" required placeholder="Ex: 123456" className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors" />
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Matrícula *</label>
+              <input type="text" name="matricula" required placeholder="Ex: 123456" className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white bg-slate-50 transition-colors font-semibold text-slate-800" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Tipo de Vínculo *</label>
-              <select name="vinculo" required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700">
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Tipo de Vínculo *</label>
+              <select name="vinculo" required className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white bg-slate-50 transition-colors text-slate-700">
                 <option value="EFETIVO">Efetivo</option>
                 <option value="CONTRATADO">Contratado</option>
                 <option value="COMISSIONADO">Comissionado</option>
@@ -173,14 +186,14 @@ export default async function NovoServidorPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Data de Admissão *</label>
-              <input type="date" name="dataAdmissao" required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700" />
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Data de Admissão *</label>
+              <input type="date" name="dataAdmissao" required className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white bg-slate-50 transition-colors font-semibold text-slate-700" />
             </div>
 
             {/* Linha 2 (Cargos e Lotação) */}
             <div className="md:col-span-1">
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Cargo *</label>
-              <select name="cargo" required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700">
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Cargo *</label>
+              <select name="cargo" required className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white bg-slate-50 transition-colors font-semibold text-slate-700">
                 <option value="">Selecione um cargo...</option>
                 {listaCargos.map((c) => (
                   <option key={c.id} value={c.nome}>{c.nome}</option>
@@ -188,8 +201,8 @@ export default async function NovoServidorPage() {
               </select>
             </div>
             <div className="md:col-span-2">
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Lotação (Setor/Secretaria) *</label>
-              <select name="lotacao" required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700">
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Lotação (Setor/Secretaria) *</label>
+              <select name="lotacao" required className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white bg-slate-50 transition-colors font-semibold text-slate-700">
                 <option value="">Selecione uma lotação...</option>
                 {listaLotacoes.map((l) => (
                   <option key={l.id} value={l.nome}>{l.nome}</option>
@@ -199,15 +212,15 @@ export default async function NovoServidorPage() {
 
             {/* Linha 3 (Folha de Pagamento) */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Função (Opcional)</label>
-              <input type="text" name="funcao" placeholder="Ex: Diretor(a)" className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors" />
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Função (Opcional)</label>
+              <input type="text" name="funcao" placeholder="Ex: Diretor(a)" className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white bg-slate-50 transition-colors text-slate-700" />
             </div>
             
             <div>
-              <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase mb-2">
+              <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">
                 <Clock size={14} className="text-blue-600" /> Jornada de Trabalho *
               </label>
-              <select name="jornada" required className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors text-slate-700">
+              <select name="jornada" required className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white bg-slate-50 transition-colors text-slate-700">
                 <option value="">Selecione...</option>
                 <option value="20h Semanais">20h Semanais</option>
                 <option value="30h Semanais">30h Semanais</option>
@@ -218,11 +231,11 @@ export default async function NovoServidorPage() {
             </div>
 
             <div>
-              <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase mb-2">
+              <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">
                 <DollarSign size={14} className="text-emerald-600" /> Remuneração Base (Bruto) *
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-3 text-slate-400 font-bold">R$</span>
+                <span className="absolute left-4 top-3.5 text-slate-400 font-bold text-sm">R$</span>
                 <input 
                   type="number" 
                   step="0.01" 
@@ -230,7 +243,7 @@ export default async function NovoServidorPage() {
                   name="remuneracaoBase" 
                   required 
                   placeholder="0.00" 
-                  className="w-full border border-slate-200 rounded-xl p-3 pl-11 outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors font-semibold text-slate-800" 
+                  className="w-full border border-slate-200 rounded-xl p-3 text-sm pl-11 outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white bg-slate-50 transition-colors font-extrabold text-slate-800" 
                 />
               </div>
             </div>
@@ -242,9 +255,9 @@ export default async function NovoServidorPage() {
         <div className="flex justify-end pt-2 pb-8">
           <button 
             type="submit" 
-            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3.5 rounded-xl font-extrabold transition-all shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 text-sm w-full sm:w-auto"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3.5 rounded-xl font-extrabold transition-all shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 text-sm w-full sm:w-auto hover:-translate-y-0.5 active:translate-y-0"
           >
-            <Save size={18} /> Salvar Servidor
+            <Save size={18} /> Cadastrar Servidor
           </button>
         </div>
         

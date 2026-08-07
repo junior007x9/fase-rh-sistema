@@ -5,11 +5,10 @@ import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { Calculator, Calendar, Search, FileText, ChevronRight, ChevronLeft, AlertCircle, Banknote } from "lucide-react";
 
-export const dynamic = "force-dynamic";
+// IMPORT DA NOSSA CENTRAL DE FORMATAÇÃO 🚀
+import { formatarMoedaExibicao } from "../utils/formatters";
 
-function formatarMoeda(valor: number) {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
-}
+export const dynamic = "force-dynamic";
 
 export default async function FolhaPagamentoPage({ searchParams }: { searchParams: Promise<{ mesAno?: string, busca?: string, pagina?: string }> }) {
   const resolvedSearchParams = await searchParams;
@@ -189,19 +188,19 @@ export default async function FolhaPagamentoPage({ searchParams }: { searchParam
                   <div className="w-full xl:w-auto flex-1 grid grid-cols-4 gap-4 text-right items-center">
                     <div>
                       <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wide">Base Contratual</p>
-                      <p className="text-sm font-semibold text-gray-700">{formatarMoeda(srv.remuneracaoBase || 0)}</p>
+                      <p className="text-sm font-semibold text-gray-700">{formatarMoedaExibicao(srv.remuneracaoBase || 0)}</p>
                     </div>
                     <div>
                       <p className="text-[10px] text-green-600/70 font-bold uppercase tracking-wide">Tot. Proventos</p>
-                      <p className="text-sm font-semibold text-green-700">{formatarMoeda(totalProventosFinal)}</p>
+                      <p className="text-sm font-semibold text-green-700">{formatarMoedaExibicao(totalProventosFinal)}</p>
                     </div>
                     <div>
                       <p className="text-[10px] text-red-600/70 font-bold uppercase tracking-wide">Tot. Descontos</p>
-                      <p className="text-sm font-semibold text-red-700">{formatarMoeda(totaisSrv.descontos)}</p>
+                      <p className="text-sm font-semibold text-red-700">{formatarMoedaExibicao(totaisSrv.descontos)}</p>
                     </div>
                     <div className="bg-emerald-50 p-2 rounded border border-emerald-100">
                       <p className="text-[10px] text-emerald-800 font-bold uppercase tracking-wide">Líquido</p>
-                      <p className="text-base font-black text-emerald-900">{formatarMoeda(liquido)}</p>
+                      <p className="text-base font-black text-emerald-900">{formatarMoedaExibicao(liquido)}</p>
                     </div>
                   </div>
                   
@@ -259,7 +258,7 @@ export default async function FolhaPagamentoPage({ searchParams }: { searchParam
             {/* RODAPÉ: TOTAL DA FOLHA */}
             <div className="p-4 bg-gray-100 border-t border-gray-200 flex justify-end items-center gap-4">
               <span className="text-sm font-bold text-gray-500 uppercase">Impacto Líquido Total da Folha:</span>
-              <span className="text-xl font-black text-gray-900">{formatarMoeda(totalGeralEmpresa)}</span>
+              <span className="text-xl font-black text-gray-900">{formatarMoedaExibicao(totalGeralEmpresa)}</span>
             </div>
 
           </div>

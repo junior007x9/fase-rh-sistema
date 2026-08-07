@@ -14,7 +14,22 @@ import {
   excluirAusencia 
 } from "../../../actions/ausencias";
 
+// IMPORT DA NOSSA CENTRAL DE FORMATAÇÃO 🚀
+import { formatarDataExibicao } from "../../../utils/formatters";
+
 export const dynamic = "force-dynamic";
+
+// Função auxiliar para deixar o nome do tipo de ausência mais legível e bonito na tela
+const formatarTipoAusencia = (tipo: string) => {
+  const tipos: Record<string, string> = {
+    FERIAS: "Férias",
+    LICENCA_MATERNIDADE: "Licença Maternidade",
+    SAUDE: "Saúde / Atestado",
+    LICENCA_PREMIO: "Licença Prêmio",
+    AFASTAMENTO_SUPERIOR_15: "Afastamento > 15 dias"
+  };
+  return tipos[tipo] || tipo.replace(/_/g, ' ');
+};
 
 export default async function AusenciasPage({ 
   params, 
@@ -50,12 +65,6 @@ export default async function AusenciasPage({
   // Estados de edição via URL
   const periodoEditando = editarPeriodoId ? periodos.find(p => p.id === editarPeriodoId) : null;
   const ausenciaEditando = editarAusenciaId ? ausencias.find(a => a.id === editarAusenciaId) : null;
-
-  // Função auxiliar para formatar datas (YYYY-MM-DD para DD/MM/YYYY)
-  const formatarData = (dataBase: string) => {
-    if (!dataBase) return "";
-    return dataBase.split('-').reverse().join('/');
-  };
 
   return (
     <div className="max-w-7xl mx-auto pb-12 space-y-6 animate-in fade-in duration-500">
@@ -128,7 +137,7 @@ export default async function AusenciasPage({
                   <div>
                     <p className="text-sm font-bold text-slate-800 flex items-center gap-2">
                       <Calendar size={14} className="text-slate-400"/>
-                      {formatarData(p.dataInicio)} a {formatarData(p.dataFim)}
+                      {formatarDataExibicao(p.dataInicio)} a {formatarDataExibicao(p.dataFim)}
                     </p>
                     <p className="text-xs font-medium text-slate-500 mt-1.5">Dias restantes: <span className="font-bold text-slate-700">{p.diasRestantes}</span></p>
                   </div>
@@ -142,7 +151,7 @@ export default async function AusenciasPage({
                       <Link href={`/servidores/${servidorId}/ausencias?editarPeriodo=${p.id}`} scroll={false} className="p-2 text-amber-600 hover:bg-amber-50 border border-transparent hover:border-amber-200 rounded-lg transition-colors">
                         <Pencil size={16} />
                       </Link>
-                      <BotaoExcluir id={p.id} nomeRegistro={`Período ${formatarData(p.dataInicio)}`} acaoExcluir={excluirPeriodoAquisitivo as any} />
+                      <BotaoExcluir id={p.id} nomeRegistro={`Período ${formatarDataExibicao(p.dataInicio)}`} acaoExcluir={excluirPeriodoAquisitivo as any} />
                     </div>
                   </div>
                 </div>
@@ -202,7 +211,7 @@ export default async function AusenciasPage({
               <select name="periodoAquisitivoId" defaultValue={ausenciaEditando?.periodoAquisitivoId || ""} className="border border-slate-200 p-3 rounded-xl w-full text-sm bg-white outline-none focus:ring-2 focus:ring-purple-500 text-slate-700 transition-colors">
                 <option value="">Não vincular</option>
                 {periodos.filter(p => p.status === 'PENDENTE').map(p => (
-                  <option key={p.id} value={p.id}>{formatarData(p.dataInicio)} a {formatarData(p.dataFim)}</option>
+                  <option key={p.id} value={p.id}>{formatarDataExibicao(p.dataInicio)} a {formatarDataExibicao(p.dataFim)}</option>
                 ))}
               </select>
             </div>
@@ -224,10 +233,10 @@ export default async function AusenciasPage({
               ausencias.map((a) => (
                 <div key={a.id} className={`p-4 bg-white border rounded-xl shadow-sm border-l-4 flex justify-between items-start group transition-all ${ausenciaEditando?.id === a.id ? 'border-amber-400 bg-amber-50/50' : 'border-slate-200 border-l-purple-500 hover:shadow-md hover:border-slate-300'}`}>
                   <div className="flex-1">
-                    <p className="text-sm font-bold text-slate-800">{a.tipoAusencia.replace(/_/g, ' ')}</p>
+                    <p className="text-sm font-bold text-slate-800">{formatarTipoAusencia(a.tipoAusencia)}</p>
                     <div className="flex items-center gap-2 mt-1.5">
                       <span className="text-[10px] font-bold text-purple-700 bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1">
-                         <Calendar size={10}/> {formatarData(a.dataInicio)} a {formatarData(a.dataFim)}
+                         <Calendar size={10}/> {formatarDataExibicao(a.dataInicio)} a {formatarDataExibicao(a.dataFim)}
                       </span>
                     </div>
                     {a.observacao && (
@@ -240,7 +249,7 @@ export default async function AusenciasPage({
                     <Link href={`/servidores/${servidorId}/ausencias?editarAusencia=${a.id}`} scroll={false} className="p-2 text-amber-600 hover:bg-amber-50 border border-transparent hover:border-amber-200 rounded-lg transition-colors">
                       <Pencil size={16} />
                     </Link>
-                    <BotaoExcluir id={a.id} nomeRegistro={a.tipoAusencia.replace(/_/g, ' ')} acaoExcluir={excluirAusencia as any} />
+                    <BotaoExcluir id={a.id} nomeRegistro={formatarTipoAusencia(a.tipoAusencia)} acaoExcluir={excluirAusencia as any} />
                   </div>
                 </div>
               ))

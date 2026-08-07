@@ -11,6 +11,9 @@ import { eq } from "drizzle-orm";
 import { registrarLogAuditoria } from "./auditoria";
 import { EVENTOS_FOLHA, calcularDescontoFalta, calcularDecimoTerceiro, calcularVerbasFerias, calcularVerbasRescisorias } from "../utils/calculosFolha";
 
+// IMPORT DA NOSSA CENTRAL DE FORMATAÇÃO 🚀
+import { formatarDataInput, formatarNumeroInput } from "../utils/formatters";
+
 // =========================================
 // 1. REGISTRAR TRANSFERÊNCIA (Já existia)
 // =========================================
@@ -21,7 +24,9 @@ export async function registrarTransferencia(formData: FormData) {
   const servidorId = formData.get("servidorId") as string;
   const lotacaoAnterior = formData.get("lotacaoAnterior") as string;
   const lotacaoNova = formData.get("lotacaoNova") as string;
-  const dataOcorrencia = formData.get("dataOcorrencia") as string;
+  
+  // Blindagem de data
+  const dataOcorrencia = formatarDataInput(formData.get("dataOcorrencia") as string);
   const motivo = formData.get("motivo") as string;
 
   try {
@@ -54,17 +59,20 @@ export async function adicionarLancamentoFolha(formData: FormData) {
   const servidorId = formData.get("servidorId") as string;
   const mesAno = formData.get("mesAno") as string; // Ex: 07-2026 ou 13-2026
   const codigoEvento = formData.get("codigoEvento") as string;
-  const quantidadeStr = formData.get("quantidade") as string;
-  const valorManualStr = formData.get("valorManual") as string;
-
+  
   const [srv] = await db.select().from(servidores).where(eq(servidores.id, servidorId));
   if (!srv) throw new Error("Servidor não encontrado");
 
   const evento = Object.values(EVENTOS_FOLHA).find(e => e.codigo === codigoEvento);
   if (!evento) throw new Error("Evento inválido");
 
-  let quantidade = quantidadeStr ? parseFloat(quantidadeStr) : null;
-  let valorFinal = valorManualStr ? parseFloat(valorManualStr.replace(',', '.')) : 0;
+  // BLINDAGEM DE NÚMEROS E MOEDA
+  const quantidadeFormato = formatarNumeroInput(formData.get("quantidade"));
+  let quantidade = quantidadeFormato !== "" ? Number(quantidadeFormato) : null;
+  
+  const valorManualFormato = formatarNumeroInput(formData.get("valorManual"));
+  let valorFinal = valorManualFormato !== "" ? Number(valorManualFormato) : 0;
+
   const anoReferencia = parseInt(mesAno.split('-')[1]);
 
   // MOTOR DE CÁLCULO PARAMETRIZADO
@@ -120,6 +128,7 @@ export async function excluirLancamentoFolha(idLancamento: string, servidorId: s
   
   revalidatePath(`/folha/${servidorId}`);
 }
+
 // =========================================
 // 4. PROCESSAR FÉRIAS AUTOMÁTICAS
 // =========================================
@@ -129,7 +138,9 @@ export async function processarFerias(formData: FormData) {
 
   const servidorId = formData.get("servidorId") as string;
   const mesAno = formData.get("mesAno") as string;
-  const pensaoPercStr = formData.get("pensaoPerc") as string;
+  
+  // Blindagem de percentual de pensão
+  const pensaoPercFormato = formatarNumeroInput(formData.get("pensaoPerc"));
 
   const [srv] = await db.select().from(servidores).where(eq(servidores.id, servidorId));
   if (!srv || !srv.remuneracaoBase || !srv.dataAdmissao) throw new Error("Dados do servidor incompletos.");
@@ -147,8 +158,8 @@ export async function processarFerias(formData: FormData) {
   await inserir(EVENTOS_FOLHA.FERIAS.codigo, isIntegral ? `${EVENTOS_FOLHA.FERIAS.nome} (Integral)` : `${EVENTOS_FOLHA.FERIAS.nome} (Proporcional)`, "PROVENTO", valorFerias, isIntegral ? 30 : avos);
   await inserir(EVENTOS_FOLHA.FERIAS_TERCO.codigo, EVENTOS_FOLHA.FERIAS_TERCO.nome, "PROVENTO", valorTerco, null);
 
-  if (pensaoPercStr) {
-    const perc = parseFloat(pensaoPercStr.replace(',', '.'));
+  if (pensaoPercFormato !== "") {
+    const perc = Number(pensaoPercFormato);
     if (perc > 0) {
       const valorPensao = ((valorFerias + valorTerco) * perc) / 100;
       await inserir(EVENTOS_FOLHA.PENSAO.codigo, EVENTOS_FOLHA.PENSAO.nome, "DESCONTO", Number(valorPensao.toFixed(2)), perc);
@@ -168,10 +179,12 @@ export async function processarRescisao(formData: FormData) {
   if (!sessao) throw new Error("Acesso negado.");
 
   const servidorId = formData.get("servidorId") as string;
-  const dataDesligamento = formData.get("dataDesligamento") as string;
+  const dataDesligamento = formatarDataInput(formData.get("dataDesligamento") as string);
   const temFeriasVencidas = formData.get("feriasVencidas") === "sim";
-  const diferencaSalarioStr = formData.get("diferencaSalario") as string;
-  const pensaoPercStr = formData.get("pensaoPerc") as string;
+  
+  // BLINDAGEM DE MOEDA E PERCENTUAL
+  const diferencaFormato = formatarNumeroInput(formData.get("diferencaSalario"));
+  const pensaoPercFormato = formatarNumeroInput(formData.get("pensaoPerc"));
 
   const [srv] = await db.select().from(servidores).where(eq(servidores.id, servidorId));
   if (!srv || !srv.remuneracaoBase || !srv.dataAdmissao) throw new Error("Dados incompletos");
@@ -202,14 +215,14 @@ export async function processarRescisao(formData: FormData) {
   await inserir(EVENTOS_FOLHA.RESCISAO_FERIAS_PROP.codigo, EVENTOS_FOLHA.RESCISAO_FERIAS_PROP.nome, "PROVENTO", verbas.valorFeriasProp, verbas.avosFeriasProp);
   await inserir(EVENTOS_FOLHA.RESCISAO_TERCO.codigo, EVENTOS_FOLHA.RESCISAO_TERCO.nome, "PROVENTO", verbas.valorTerco, null);
   
-  const diferenca = diferencaSalarioStr ? parseFloat(diferencaSalarioStr.replace(',', '.')) : 0;
+  const diferenca = diferencaFormato !== "" ? Number(diferencaFormato) : 0;
   if (diferenca > 0) await inserir(EVENTOS_FOLHA.DIFERENCA_SALARIO.codigo, EVENTOS_FOLHA.DIFERENCA_SALARIO.nome, "PROVENTO", diferenca, null);
 
   await inserir(EVENTOS_FOLHA.INSS.codigo, "INSS (Rescisão)", "DESCONTO", verbas.inss, null);
   await inserir(EVENTOS_FOLHA.IRRF.codigo, "IRRF (Rescisão)", "DESCONTO", verbas.irrf, null);
 
-  if (pensaoPercStr) {
-    const perc = parseFloat(pensaoPercStr.replace(',', '.'));
+  if (pensaoPercFormato !== "") {
+    const perc = Number(pensaoPercFormato);
     if (perc > 0) {
       // Pensão sobre Saldo, 13º e eventual Diferença (conforme lei)
       const basePensao = verbas.saldoSalario + verbas.valor13 + diferenca;

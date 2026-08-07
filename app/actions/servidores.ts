@@ -9,6 +9,8 @@ import { redirect } from "next/navigation";
 import { getSessaoUsuario } from "./auth";
 import { eq } from "drizzle-orm";
 import { registrarLogAuditoria } from "./auditoria";
+// IMPORT DA NOSSA CENTRAL DE FORMATAÇÃO 🚀
+import { formatarDataInput, formatarNumeroInput } from "../utils/formatters";
 
 export async function cadastrarServidor(formData: FormData) {
   const sessao = await getSessaoUsuario();
@@ -16,23 +18,31 @@ export async function cadastrarServidor(formData: FormData) {
 
   const servidorId = randomUUID();
 
-  // Vínculo Institucional e Base Salarial (Atualizado para a Folha de Pagamento)
+  // Vínculo Institucional e Base Salarial
   const matricula = formData.get("matricula") as string;
   const cargo = formData.get("cargo") as string;
   const lotacao = formData.get("lotacao") as string;
   const vinculo = formData.get("vinculo") as "EFETIVO" | "CONTRATADO" | "COMISSIONADO" | "ESTAGIARIO";
-  const dataAdmissao = formData.get("dataAdmissao") as string;
+  
+  // APLICA O FORMATADOR DE DATA AQUI 👇
+  const dataAdmissao = formatarDataInput(formData.get("dataAdmissao") as string);
   
   // ---> NOVOS CAMPOS <---
   const funcao = formData.get("funcao") as string;
   const jornada = formData.get("jornada") as string;
-  const remuneracaoBaseStr = formData.get("remuneracaoBase") as string;
-  const remuneracaoBase = remuneracaoBaseStr ? parseFloat(remuneracaoBaseStr) : null;
+  
+  // APLICA O FORMATADOR DE DINHEIRO AQUI 👇
+  const remuneracaoRaw = formData.get("remuneracaoBase");
+  const remuneracaoFormatada = formatarNumeroInput(remuneracaoRaw);
+  const remuneracaoBase = remuneracaoFormatada !== "" ? Number(remuneracaoFormatada) : null;
 
   // Dados Pessoais
   const nome = formData.get("nome") as string;
   const nomeSocial = formData.get("nomeSocial") as string;
-  const dataNascimento = formData.get("dataNascimento") as string;
+  
+  // APLICA O FORMATADOR DE DATA AQUI 👇
+  const dataNascimento = formatarDataInput(formData.get("dataNascimento") as string);
+  
   const email = formData.get("email") as string;
   const telefone = formData.get("telefone") as string;
   const tipoSanguineo = formData.get("tipoSanguineo") as string;
@@ -53,9 +63,9 @@ export async function cadastrarServidor(formData: FormData) {
       matricula: matricula || null,
       cargo: cargo || null,
       lotacao: lotacao || null,
-      funcao: funcao || null,             // Adicionado
-      jornada: jornada || null,           // Adicionado
-      remuneracaoBase: remuneracaoBase,   // Adicionado
+      funcao: funcao || null,
+      jornada: jornada || null,
+      remuneracaoBase: remuneracaoBase,
       vinculo,
       dataAdmissao,
       status: "ATIVO",
@@ -103,17 +113,25 @@ export async function atualizarServidor(formData: FormData) {
   const cargo = formData.get("cargo") as string;
   const lotacao = formData.get("lotacao") as string;
   const vinculo = formData.get("vinculo") as "EFETIVO" | "CONTRATADO" | "COMISSIONADO" | "ESTAGIARIO";
-  const dataAdmissao = formData.get("dataAdmissao") as string;
+  
+  // APLICA O FORMATADOR DE DATA AQUI 👇
+  const dataAdmissao = formatarDataInput(formData.get("dataAdmissao") as string);
 
   // ---> NOVOS CAMPOS <---
   const funcao = formData.get("funcao") as string;
   const jornada = formData.get("jornada") as string;
-  const remuneracaoBaseStr = formData.get("remuneracaoBase") as string;
-  const remuneracaoBase = remuneracaoBaseStr ? parseFloat(remuneracaoBaseStr) : null;
+  
+  // APLICA O FORMATADOR DE DINHEIRO AQUI 👇
+  const remuneracaoRaw = formData.get("remuneracaoBase");
+  const remuneracaoFormatada = formatarNumeroInput(remuneracaoRaw);
+  const remuneracaoBase = remuneracaoFormatada !== "" ? Number(remuneracaoFormatada) : null;
 
   const nome = formData.get("nome") as string;
   const nomeSocial = formData.get("nomeSocial") as string;
-  const dataNascimento = formData.get("dataNascimento") as string;
+  
+  // APLICA O FORMATADOR DE DATA AQUI 👇
+  const dataNascimento = formatarDataInput(formData.get("dataNascimento") as string);
+  
   const email = formData.get("email") as string;
   const telefone = formData.get("telefone") as string;
   const tipoSanguineo = formData.get("tipoSanguineo") as string;
@@ -132,9 +150,9 @@ export async function atualizarServidor(formData: FormData) {
       matricula: matricula || null,
       cargo: cargo || null,
       lotacao: lotacao || null,
-      funcao: funcao || null,             // Adicionado
-      jornada: jornada || null,           // Adicionado
-      remuneracaoBase: remuneracaoBase,   // Adicionado
+      funcao: funcao || null,
+      jornada: jornada || null,
+      remuneracaoBase: remuneracaoBase,
       vinculo,
       dataAdmissao,
     }).where(eq(servidores.id, servidorId));

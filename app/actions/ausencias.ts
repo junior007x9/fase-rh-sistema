@@ -107,7 +107,9 @@ export async function salvarEventoAusencia(formData: FormData) {
 
   // Se houver Qtd Dias (vindo do nosso novo form), calculamos a DataFim automaticamente
   if (diasStr !== "") {
-    dias = parseInt(diasStr);
+    // CORREÇÃO: Usando Number() no lugar de parseInt() para satisfazer o TypeScript
+    dias = Number(diasStr);
+    
     // Cria a data sempre no horário neutro para não ter bug de fuso horário brasileiro
     const dataInicioObj = new Date(dataInicio + "T12:00:00Z");
     const dataFimObj = new Date(dataInicioObj);
@@ -168,7 +170,9 @@ export async function atualizarAusencia(formData: FormData) {
 
   // Recalcula DataFim na Edição também
   if (diasStr !== "") {
-    dias = parseInt(diasStr);
+    // CORREÇÃO: Usando Number() no lugar de parseInt() para satisfazer o TypeScript
+    dias = Number(diasStr);
+    
     const dataInicioObj = new Date(dataInicio + "T12:00:00Z");
     const dataFimObj = new Date(dataInicioObj);
     dataFimObj.setDate(dataFimObj.getDate() + dias - 1);

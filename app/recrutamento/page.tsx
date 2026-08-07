@@ -162,7 +162,8 @@ export default async function RecrutamentoPage({ searchParams }: { searchParams:
 
                       <td className="py-4 px-6 text-xs text-slate-600 space-y-1.5">
                         <p className="flex items-center gap-1.5 font-medium"><Phone size={12} className="text-slate-400"/> {candidato.telefone}</p>
-                        <p className="flex items-center gap-1.5 truncate max-w-[150px]" title={candidato.email}><Mail size={12} className="text-slate-400"/> {candidato.email}</p>
+                        {/* AQUI FOI APLICADA A CORREÇÃO (|| "") */}
+                        <p className="flex items-center gap-1.5 truncate max-w-[150px]" title={candidato.email || ""}><Mail size={12} className="text-slate-400"/> {candidato.email}</p>
                       </td>
 
                       <td className="py-4 px-6 text-center">

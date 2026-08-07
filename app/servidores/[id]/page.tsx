@@ -5,7 +5,7 @@ import {
   servidores, dadosPessoais, documentos, enderecos, dadosBancarios, 
   dependentesPensionistas, historicoTransferencias, lotacoes, periodosAquisitivos, lancamentosFolha 
 } from "../../../db/schema";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, isNull } from "drizzle-orm";
 import Link from "next/link";
 import { 
   ArrowLeft, MapPin, Landmark, Users, FileWarning, Clock, ShieldAlert, 
@@ -47,10 +47,16 @@ export default async function PerfilServidorPage({
   const [endereco] = await db.select().from(enderecos).where(eq(enderecos.servidorId, servidorId));
   const [banco] = await db.select().from(dadosBancarios).where(eq(dadosBancarios.servidorId, servidorId));
   
-  const listaDependentes = await db.select().from(dependentesPensionistas).where(eq(dependentesPensionistas.servidorId, servidorId));
+  // APLICAÇÃO DO SOFT DELETE: Omitir os dependentes já excluídos logicamente
+  const listaDependentes = await db.select().from(dependentesPensionistas).where(
+    and(
+      eq(dependentesPensionistas.servidorId, servidorId),
+      isNull(dependentesPensionistas.excluidoEm)
+    )
+  );
   
-  // SEGURANÇA: Busca lotações da tabela oficial ou extrai dos servidores se estiver vazia
-  let listaLotacoes = await db.select().from(lotacoes);
+  // SEGURANÇA: Busca lotações da tabela oficial (ignorando excluídas) ou extrai dos servidores se estiver vazia
+  let listaLotacoes = await db.select().from(lotacoes).where(isNull(lotacoes.excluidoEm));
   if (listaLotacoes.length === 0) {
     const todosServidoresLotacao = await db.select({ lotacao: servidores.lotacao }).from(servidores);
     const lotacoesUnicas = Array.from(new Set(todosServidoresLotacao.map(s => s.lotacao).filter(Boolean))) as string[];
@@ -58,7 +64,8 @@ export default async function PerfilServidorPage({
       id: String(index), 
       nome, 
       sigla: "", 
-      criadoEm: null 
+      criadoEm: null,
+      excluidoEm: null // <-- CORREÇÃO DO TYPESCRIPT AQUI!
     }));
   }
   
@@ -67,10 +74,15 @@ export default async function PerfilServidorPage({
     .where(eq(historicoTransferencias.servidorId, servidorId))
     .orderBy(desc(historicoTransferencias.dataOcorrencia));
 
-  // Busca dados de Férias e Rescisão para os relatórios
+  // Busca dados de Férias e Rescisão para os relatórios (ignorando período aquisitivo apagado)
   const ferias = await db.select()
     .from(periodosAquisitivos)
-    .where(eq(periodosAquisitivos.servidorId, servidorId));
+    .where(
+      and(
+        eq(periodosAquisitivos.servidorId, servidorId),
+        isNull(periodosAquisitivos.excluidoEm)
+      )
+    );
 
   let folhaRescisao: any[] = [];
   if (servidorBase && servidorBase.status === 'DESLIGADO' && servidorBase.dataDesligamento) {
